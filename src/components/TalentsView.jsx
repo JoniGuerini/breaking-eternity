@@ -208,6 +208,8 @@ const HeaderStats = ({ type, balance, activeTime, nextPointTime }) => {
 
 const TalentsView = () => {
     const { gameState, buyTalent, respecTalents } = useGame();
+    const focusLevel = gameState.talents['focus_mastery'] || 0;
+    const focusInterval = 60 - (focusLevel * 5);
     const [dragConstraints, setDragConstraints] = React.useState({ left: 0, right: 0, top: 0, bottom: 0 });
     const dragControls = useRef({ x: 0, y: 0 });
 
