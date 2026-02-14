@@ -1,9 +1,9 @@
 import React from 'react';
 import { useGame } from '../game/gameState';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Clock } from 'lucide-react';
 import Decimal from 'break_eternity.js';
 import { RESEARCH_DATA } from '../game/researchData';
-import { formatNumber } from '../utils/formatUtils';
+import { formatNumber, formatTime } from '../utils/formatUtils';
 
 const StatisticsView = () => {
     const { gameState, getNextMilestone } = useGame();
@@ -45,6 +45,27 @@ const StatisticsView = () => {
                     <p className="text-muted-foreground text-sm">
                         Detailed tracking of your chronological progress.
                     </p>
+                </div>
+            </div>
+
+            {/* Primary Stat: Playtime (Simple & Compact) */}
+            <div className="bg-card/30 rounded-xl border border-primary/20 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <Clock size={20} />
+                    </div>
+                    <div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">
+                            Total Save Duration
+                        </div>
+                        <div className="text-2xl font-mono font-black tracking-tighter text-foreground">
+                            {formatTime(Math.floor(gameState.playtime || 0))}
+                        </div>
+                    </div>
+                </div>
+                <div className="px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500/50"></span>
+                    Reality Synchronized
                 </div>
             </div>
 

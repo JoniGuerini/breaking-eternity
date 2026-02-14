@@ -5,32 +5,27 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     const genIndex = i;
     const genNum = i + 1;
 
-    // Speed Research (Overclock)
+    // Logistics Research (Maintenance Reduction)
     const speedItem = {
-        id: `gen${genNum}_speed`,
-        name: `Generator ${genNum} Overclock`,
+        id: `gen${genNum}_speed`, // Kept ID for save compatibility
+        name: `Reservoir Optimization ${genNum}`,
         target: `Generator ${genNum}`,
-        type: 'Overclock',
-        maxLevel: 9,
+        type: 'Logistics',
+        maxLevel: 20,
         getCost: (level) => new Decimal(Math.pow(genNum, 2)).times(new Decimal(2).pow(level)),
-        getValue: (level) => {
-            const basePeriod = 5 * genNum * (genNum + 1);
-            return basePeriod * (1 - (level * 0.1));
-        },
-        baseDescription: "Reduces cycle time by 10%",
+        getValue: (level) => Math.pow(0.9, level), // 10% reduction per level
+        baseDescription: "Reduces stabilization cost by 10%",
         getEffectValues: (level) => {
-            const basePeriod = 5 * genNum * (genNum + 1);
-            const current = basePeriod * (1 - (level * 0.1));
-            const next = basePeriod * (1 - ((level + 1) * 0.1));
+            const current = Math.pow(0.9, level) * 100;
+            const next = Math.pow(0.9, level + 1) * 100;
             return {
-                current: formatTime(current),
-                next: formatTime(next)
+                current: `${current.toFixed(1)}%`,
+                next: `${next.toFixed(1)}%`
             };
         },
         getEffectDisplay: (level) => {
-            const basePeriod = 5 * genNum * (genNum + 1);
-            const val = basePeriod * (1 - (level * 0.1));
-            return formatTime(val);
+            const val = Math.pow(0.9, level) * 100;
+            return `${val.toFixed(1)}% cost`;
         },
         condition: (gameState) => {
             const gen = gameState.generators[genIndex];
@@ -41,14 +36,14 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     // Efficiency Research (Yield Optimization)
     const effItem = {
         id: `gen${genNum}_eff`,
-        name: `Generator ${genNum} Optimization`,
+        name: `Fragment Refinement ${genNum}`,
         target: `Generator ${genNum}`,
         type: 'Efficiency',
         maxLevel: 100, // Efficiency can be much higher
         // Efficiency costs 5x more than Speed base
         getCost: (level) => new Decimal(Math.pow(genNum, 2) * 5).times(new Decimal(2.5).pow(level)),
         getValue: (level) => 1 + level,
-        baseDescription: "Increases production yield by 100%",
+        baseDescription: "Increases fragment yield by 100%",
         getEffectValues: (level) => {
             return {
                 current: `x${level + 1}`,
@@ -65,14 +60,14 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     // Resonance Research (Insight Multiplier)
     const resonanceItem = {
         id: `gen${genNum}_resonance`,
-        name: `Generator ${genNum} Resonance`,
+        name: `Eternity Resonance ${genNum}`,
         target: `Generator ${genNum}`,
         type: 'Resonance',
         maxLevel: 10, // Multiplier caps at x1024 (2^10)
         // High cost multiplier (4x base, 3x growth)
         getCost: (level) => new Decimal(Math.pow(genNum, 2) * 20).times(new Decimal(3.5).pow(level)),
         getValue: (level) => Math.pow(2, level),
-        baseDescription: "Doubles Insight rewards from milestones",
+        baseDescription: "Doubles Insight results from milestones",
         getEffectValues: (level) => {
             return {
                 current: `x${Math.pow(2, level)}`,

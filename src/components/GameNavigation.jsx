@@ -1,20 +1,21 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Settings, Zap, FlaskConical, BookOpen, BarChart3, Clock, Sparkles } from 'lucide-react'; // Icons for tabs
+import { Settings, Zap, FlaskConical, BookOpen, BarChart3, Clock, Sparkles, Binary } from 'lucide-react'; // Icons for tabs
 
 const GameNavigation = ({ activeView, setView }) => {
     const tabs = [
         { id: 'generators', label: 'Generators', icon: Zap },
         { id: 'research', label: 'Research', icon: FlaskConical },
+        { id: 'experiments', label: 'Experiments', icon: Binary },
         { id: 'talents', label: 'Talents', icon: Sparkles },
-        { id: 'chronos', label: 'Chronos', icon: Clock },
+        { id: 'chronos', label: 'Reservoir', icon: Clock },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
 
     return (
         <div className="w-full mb-6">
-            <div className="bg-muted/30 p-1 rounded-xl grid grid-cols-5 gap-1 w-full">
+            <div className="bg-muted/30 p-1 rounded-xl grid grid-cols-6 gap-1 w-full">
                 {tabs.map((tab) => {
                     const isActive = activeView === tab.id;
                     const Icon = tab.icon;

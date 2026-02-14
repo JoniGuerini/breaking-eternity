@@ -1,5 +1,4 @@
-import React, { memo, useMemo } from 'react';
-// import { useGame } from '../game/gameState'; // Removed
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import Decimal from 'break_eternity.js';
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +12,10 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-
+import { Zap } from 'lucide-react';
 
 import { formatNumber, formatTime } from '../utils/formatUtils';
+import OverclockDialog from './OverclockDialog';
 
 const GeneratorRow = ({
     generator,
@@ -25,19 +25,43 @@ const GeneratorRow = ({
     nextMilestone,
     productionPerSecond,
     buyGenerator,
-    basePeriod = 1, // Default to 1 if not provided
-    research = {}
+    research = {},
+    isOverclocked, // This is now the expiry timestamp or undefined
+    activateOverclock,
+    deactivateOverclock,
+    getMaintenanceRate,
+    reservoirFragments
 }) => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(0);
+
+    // Update countdown
+    useEffect(() => {
+        if (!isOverclocked) {
+            setTimeLeft(0);
+            return;
+        }
+
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((isOverclocked - Date.now()) / 1000));
+            setTimeLeft(remaining);
+        };
+
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+    }, [isOverclocked]);
+
+    const isActive = timeLeft > 0;
+
+    const baseMaintenanceRate = useMemo(() => {
+        // Factor out the 5x overclock multiplier if currently active to get base maintenance
+        return productionPerSecond.div(isActive ? 5 : 1).times(0.02);
+    }, [productionPerSecond, isActive]);
 
     const { next, level } = nextMilestone;
-
-    // Use amount for progress, but format it cleanly if it's large
     const nextVal = new Decimal(next);
     const currentVal = generator.amount;
-
-    // Items per batch = Average Rate * Period
-    // If rate is 0.1 and period is 10, items per batch = 1.
-    const itemsPerBatch = productionPerSecond.times(basePeriod);
 
     // Locked State (Unowned)
     if (generator.amount.lte(0)) {
@@ -68,7 +92,7 @@ const GeneratorRow = ({
                                 <span className={`font-mono text-lg font-bold ${canAfford ? 'text-green-500' : 'text-red-400'}`}>
                                     {formatNumber(cost)}
                                 </span>
-                                <span className="text-xs text-foreground uppercase font-bold">Iterons</span>
+                                <span className="text-xs text-foreground uppercase font-bold">Fragments</span>
                             </div>
                         </div>
                     </Button>
@@ -84,9 +108,7 @@ const GeneratorRow = ({
                 <div className="p-3 md:p-4 flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 items-center">
                     {/* 1. Name - STATIC */}
                     <div className="w-full lg:col-span-2 flex items-center justify-start">
-                        {useMemo(() => (
-                            <h3 className="font-bold text-base md:text-lg text-foreground leading-tight">Generator {generator.id + 1}</h3>
-                        ), [generator.id])}
+                        <h3 className="font-bold text-base md:text-lg text-foreground leading-tight">Generator {generator.id + 1}</h3>
                     </div>
 
                     {/* 2. Production Section */}
@@ -96,82 +118,43 @@ const GeneratorRow = ({
                                 <TooltipTrigger asChild>
                                     <div className="flex flex-col items-center cursor-help group">
                                         <div className="text-xs md:text-sm font-medium text-foreground flex flex-wrap gap-1 justify-center group-hover:text-primary transition-colors">
-                                            <span>
-                                                {basePeriod === 1
-                                                    ? formatNumber(productionPerSecond)
-                                                    : formatNumber(itemsPerBatch)
-                                                }
-                                            </span>
-                                            <span className="text-muted-foreground">
-                                                {basePeriod === 1 ? "/s" : ` / ${formatTime(basePeriod)}`}
-                                            </span>
+                                            <span>{formatNumber(productionPerSecond)}</span>
+                                            <span className="text-muted-foreground">/s</span>
                                             <span className="text-primary/80 text-[10px] md:text-xs ml-1">
-                                                {generator.id === 0 ? "Iterons" : `Gen ${generator.id}`}
+                                                {generator.id === 0 ? "Fragments" : `Gen ${generator.id}`}
                                             </span>
                                         </div>
-
-                                        {/* Micro Progress Bar */}
-                                        {basePeriod > 1 && (
-                                            <div className="w-24 md:w-32 h-0.5 bg-secondary mt-1 mb-0.5 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-primary"
-                                                    style={{ width: `${Math.min(100, (generator.cycleProgress || 0) / basePeriod * 100)}%` }}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {useMemo(() => (
-                                            <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider group-hover:text-foreground/80 transition-colors">Production</span>
-                                        ), [])}
+                                        <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider group-hover:text-foreground/80 transition-colors">Production</span>
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="p-4 bg-popover/95 backdrop-blur-sm border-primary/20 shadow-xl">
                                     <div className="flex flex-col gap-2 min-w-[180px]">
-                                        {useMemo(() => (
-                                            <div className="flex flex-col gap-0.5 pb-2 border-b border-border/50">
-                                                <span className="text-xs font-bold text-primary uppercase tracking-wider">Production Breakdown</span>
-                                                <span className="text-[10px] text-muted-foreground">Detailed calculation for Generator {generator.id + 1}</span>
-                                            </div>
-                                        ), [generator.id])}
+                                        <div className="flex flex-col gap-0.5 pb-2 border-b border-border/50">
+                                            <span className="text-xs font-bold text-primary uppercase tracking-wider">Production Breakdown</span>
+                                            <span className="text-[10px] text-muted-foreground">Detailed calculation for Generator {generator.id + 1}</span>
+                                        </div>
 
                                         <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-xs">
-                                            {useMemo(() => (
-                                                <span className="text-muted-foreground">Owned</span>
-                                            ), [])}
-                                            <span className="text-foreground font-mono font-bold">{formatNumber(generator.amount, { precision: 0 })}</span>
+                                            <span className="text-muted-foreground">Owned</span>
+                                            <span className="text-foreground font-mono font-bold">{formatNumber(generator.amount, { precision: 2 })}</span>
 
-                                            {useMemo(() => (
-                                                <span className="text-muted-foreground">Base Rate</span>
-                                            ), [])}
+                                            <span className="text-muted-foreground">Base Rate</span>
                                             <span className="text-foreground font-mono">
-                                                {basePeriod === 1
-                                                    ? `${formatNumber(generator.multiplier)} / s`
-                                                    : `1 / ${formatTime(basePeriod)}`}
+                                                {formatNumber(productionPerSecond.div(generator.amount.max(1)))} / s
                                             </span>
 
-                                            {useMemo(() => (
-                                                <span className="text-muted-foreground">Milestone</span>
-                                            ), [])}
+                                            <span className="text-muted-foreground">Milestone Rewards</span>
                                             <span className="text-purple-400 font-mono font-bold">+{generator.id + 1} Insight</span>
                                         </div>
 
                                         <div className="h-px bg-border/50 my-1"></div>
 
                                         <div className="grid grid-cols-[1fr_auto] gap-x-4 items-center">
-                                            {useMemo(() => (
-                                                <span className="text-xs font-bold text-foreground">
-                                                    {basePeriod === 1 ? "Total Output" : "Cycle Yield"}
-                                                </span>
-                                            ), [basePeriod])}
+                                            <span className="text-xs font-bold text-foreground">Total Output</span>
                                             <div className="flex flex-col items-end leading-none">
                                                 <span className="text-sm font-bold text-primary">
-                                                    {basePeriod === 1
-                                                        ? formatNumber(productionPerSecond)
-                                                        : formatNumber(generator.amount.times(generator.multiplier))
-                                                    }
-                                                    <span className="text-[10px] font-normal text-muted-foreground ml-1">
-                                                        {basePeriod === 1 ? "/s" : ` / ${formatTime(basePeriod)}`}
-                                                    </span>
+                                                    {formatNumber(productionPerSecond)}
+                                                    <span className="text-[10px] font-normal text-muted-foreground ml-1">/s</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -181,22 +164,18 @@ const GeneratorRow = ({
                         </TooltipProvider>
                     </div>
 
-                    {/* 3. Level Block */}
+                    {/* 3. Milestone Block */}
                     <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
                         <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0 h-5 md:h-6 bg-primary/10 text-primary border-primary/20 pointer-events-none mb-1">
-                            Lvl {level}
+                            Rank {level}
                         </Badge>
-                        {useMemo(() => (
-                            <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Level</span>
-                        ), [])}
+                        <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Milestones</span>
                     </div>
 
                     {/* 4. Owned Block */}
                     <div className="w-full lg:col-span-2 flex flex-col items-center justify-center">
                         <span className="text-foreground font-mono font-bold text-sm md:text-base">{formatNumber(generator.amount)}</span>
-                        {useMemo(() => (
-                            <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Owned</span>
-                        ), [])}
+                        <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Owned</span>
                     </div>
 
                     {/* 5. Next Milestone Block */}
@@ -204,30 +183,70 @@ const GeneratorRow = ({
                         <span className="font-mono text-foreground/80 text-[10px] md:text-xs whitespace-nowrap">
                             {formatNumber(Decimal.min(currentVal, nextVal).sub(nextMilestone.prev || 0))}<span className="opacity-50 mx-0.5">/</span>{formatNumber(nextVal.sub(nextMilestone.prev || 0))}
                         </span>
-                        {useMemo(() => (
-                            <div className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 justify-center whitespace-nowrap">
-                                Next: <span className="text-purple-400 font-bold">+{generator.id + 1}</span>
-                            </div>
-                        ), [generator.id])}
+                        <div className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 justify-center whitespace-nowrap">
+                            Next: <span className="text-purple-400 font-bold">+{generator.id + 1}</span>
+                        </div>
                     </div>
 
                     {/* 6. Action Button Block */}
-                    <div className="w-full lg:col-span-2 flex justify-center lg:justify-end">
+                    <div className="w-full lg:col-span-2 flex items-center justify-center lg:justify-end gap-2">
+                        <TooltipProvider>
+                            <Tooltip delayDuration={200}>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        onClick={() => isActive ? deactivateOverclock(generator.id) : setIsDialogOpen(true)}
+                                        variant="outline"
+                                        size="icon"
+                                        className={`h-11 w-11 transition-all duration-300 relative ${isActive ? 'bg-red-500/20 text-red-500 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-muted/10 text-muted-foreground border-zinc-800 hover:border-zinc-700 hover:text-foreground'}`}
+                                    >
+                                        <Zap size={20} className={isActive ? 'fill-current animate-pulse' : ''} />
+                                        {isActive && (
+                                            <span className="absolute -bottom-1 -right-1 bg-red-600 text-[8px] font-bold text-white px-1 rounded-sm border border-black/50">
+                                                {formatTime(timeLeft)}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-zinc-950 border-red-500/20 p-3">
+                                    <div className="text-xs space-y-1">
+                                        <div className="font-bold text-red-500 uppercase tracking-widest text-[9px]">Experimental Overclock</div>
+                                        {isActive ? (
+                                            <p className="text-zinc-400">Click to <span className="text-white font-bold">Abort</span>. Ends in {formatTime(timeLeft)}.</p>
+                                        ) : (
+                                            <p className="text-zinc-400">Force the generator beyond temporal limits.</p>
+                                        )}
+                                        <div className="flex justify-between gap-4 pt-1">
+                                            <span className="text-emerald-400 font-bold">Production: x5</span>
+                                            <span className="text-red-400 font-bold">Stability Cost: x20</span>
+                                        </div>
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <OverclockDialog
+                            isOpen={isDialogOpen}
+                            onClose={() => setIsDialogOpen(false)}
+                            onConfirm={(duration) => {
+                                activateOverclock(generator.id, duration);
+                                setIsDialogOpen(false);
+                            }}
+                            generator={generator}
+                            baseMaintenanceRate={baseMaintenanceRate}
+                            reservoirFragments={reservoirFragments}
+                        />
+
                         <Button
                             onClick={() => buyGenerator(generator.id)}
                             disabled={!canAfford}
                             variant={canAfford ? "default" : "secondary"}
-                            className={`w-full max-w-[280px] h-auto py-2.5 md:py-2 px-4 flex flex-row lg:flex-col items-center justify-center gap-3 lg:gap-0 ${!canAfford && "opacity-50"
-                                }`}
+                            className={`flex-1 max-w-[180px] h-auto py-2.5 md:py-2 px-4 flex flex-row lg:flex-col items-center justify-center gap-3 lg:gap-0 ${!canAfford && "opacity-50"}`}
                         >
-                            {useMemo(() => (
-                                <span className="text-sm font-bold">Buy</span>
-                            ), [])}
+                            <span className="text-sm font-bold">Buy</span>
                             <div className="flex items-center gap-1.5 lg:gap-0">
                                 <span className="text-xs font-mono font-bold lg:font-normal opacity-90 lg:opacity-80">
                                     {formatNumber(cost)}
                                 </span>
-                                <span className="text-[10px] uppercase font-bold lg:hidden">Iterons</span>
                             </div>
                         </Button>
                     </div>
@@ -252,31 +271,17 @@ const GeneratorRow = ({
                     </div>
                 )}
             </CardContent>
-        </Card >
+        </Card>
     );
 };
 
 const arePropsEqual = (prevProps, nextProps) => {
-    // Check primitive props
     if (prevProps.canAfford !== nextProps.canAfford) return false;
-
-    // Check generator state (amount/bought/cycleProgress)
     if (!prevProps.generator.amount.eq(nextProps.generator.amount)) return false;
-    if (prevProps.generator.cycleProgress !== nextProps.generator.cycleProgress) return false;
-
-    // Check derived values that are Decimals
     if (!prevProps.cost.eq(nextProps.cost)) return false;
     if (!prevProps.productionPerSecond.eq(nextProps.productionPerSecond)) return false;
-    if (!prevProps.multiplier.eq(nextProps.multiplier)) return false;
 
-    // Check research equality (this is shallow but sufficient for this object structure)
-    const prevSpeed = prevProps.research[`gen${prevProps.generator.id + 1}_speed`] || 0;
-    const nextSpeed = nextProps.research[`gen${nextProps.generator.id + 1}_speed`] || 0;
-    if (prevSpeed !== nextSpeed) return false;
-
-    const prevEff = prevProps.research[`gen${prevProps.generator.id + 1}_eff`] || 0;
-    const nextEff = nextProps.research[`gen${nextProps.generator.id + 1}_eff`] || 0;
-    if (prevEff !== nextEff) return false;
+    if (prevProps.isOverclocked !== nextProps.isOverclocked) return false;
 
     return true;
 };

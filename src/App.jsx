@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Settings, BarChart3 } from 'lucide-react';
 import OfflineDialog from './components/OfflineDialog';
-import TimeShiftControls from './components/TimeShiftControls';
 import ChronosView from './components/ChronosView';
 import TalentsView from './components/TalentsView';
+import ExperimentsView from './components/ExperimentsView';
 
 import Decimal from 'break_eternity.js';
 import { RESEARCH_DATA } from './game/researchData';
@@ -148,6 +148,12 @@ function GameContent() {
             </div>
           )}
 
+          {view === 'experiments' && (
+            <div className="h-full fade-in-animation">
+              <ExperimentsView />
+            </div>
+          )}
+
           {view === 'talents' && (
             <div className="h-full fade-in-animation">
               <TalentsView />
@@ -162,7 +168,6 @@ function GameContent() {
         </div>
       </div>
       <OfflineDialog />
-      <TimeShiftControls />
     </Layout>
   );
 }

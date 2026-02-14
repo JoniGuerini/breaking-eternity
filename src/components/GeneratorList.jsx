@@ -4,7 +4,17 @@ import GeneratorRow from './GeneratorRow';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const GeneratorList = () => {
-    const { gameState, getGeneratorCost, buyGenerator, calculateMultiplier, getNextMilestone, getGeneratorProduction, getBasePeriod } = useGame();
+    const {
+        gameState,
+        getGeneratorCost,
+        buyGenerator,
+        calculateMultiplier,
+        getNextMilestone,
+        getGeneratorProduction,
+        activateOverclock,
+        deactivateOverclock,
+        getMaintenanceRate
+    } = useGame();
 
     return (
         <div className="w-full h-full flex flex-col pb-4">
@@ -24,7 +34,6 @@ const GeneratorList = () => {
                             const multiplier = calculateMultiplier(gen.amount);
                             const nextMilestone = getNextMilestone(gen.amount);
                             const productionPerSecond = getGeneratorProduction(gen.id);
-                            const period = getBasePeriod ? getBasePeriod(gen.id) : (gen.id === 0 ? 10 : gen.id === 1 ? 100 : gen.id === 2 ? 600 : 600 * Math.pow(2, gen.id - 2));
 
                             return (
                                 <GeneratorRow
@@ -36,8 +45,12 @@ const GeneratorList = () => {
                                     nextMilestone={nextMilestone}
                                     productionPerSecond={productionPerSecond}
                                     buyGenerator={buyGenerator}
-                                    basePeriod={period}
                                     research={gameState.research || {}}
+                                    isOverclocked={gameState.overclockActive?.[gen.id]}
+                                    activateOverclock={activateOverclock}
+                                    deactivateOverclock={deactivateOverclock}
+                                    getMaintenanceRate={getMaintenanceRate}
+                                    reservoirFragments={gameState.treasuryIterons}
                                 />
                             );
                         });

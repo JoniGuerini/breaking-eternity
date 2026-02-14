@@ -44,25 +44,10 @@ const HeaderResourceDisplay = () => {
                 {/* Velocity / Rate Display */}
                 <div className="flex flex-col items-start leading-none opacity-80">
                     <div className="text-[11px] md:text-sm font-bold text-primary">
-                        {(() => {
-                            // Safely get period, default to 10 for Gen 0 (Iterons) if missing
-                            const rawPeriod = (game.getBasePeriod && game.getBasePeriod(0)) || 10;
-                            // Round to prevent floating point artifacts like 3.999999999999999
-                            const period = Math.round(rawPeriod * 100) / 100;
-                            const yieldPerCycle = productionPerSecond.times(period);
-
-                            return period > 1 ? (
-                                <>
-                                    +{formatNumber(yieldPerCycle)}
-                                    <span className="text-[9px] md:text-xs font-normal opacity-70"> / {formatTime(period)}</span>
-                                </>
-                            ) : (
-                                <>+{formatNumber(productionPerSecond)}/s</>
-                            );
-                        })()}
+                        +{formatNumber(productionPerSecond)}/s
                     </div>
                     <div className="text-[9px] md:text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                        Iterons
+                        Eternity Fragments
                     </div>
                 </div>
             </div>
@@ -81,28 +66,28 @@ const HeaderResourceDisplay = () => {
                 </div>
             )}
 
-            {/* Talent Resources (Focus & Flux) */}
-            {(gameState.focus?.gt(0) || gameState.activeTime > 0) && (
+            {/* Talent Resources (Active Energy & Stability Essence) */}
+            {(gameState.activeEnergy?.gt(0) || gameState.activeTime > 0) && (
                 <div className="flex items-center gap-1 md:gap-2 border-l border-border/30 pl-2 md:pl-6">
                     <div className="flex flex-col items-end leading-none">
-                        <span className="text-base md:text-xl font-bold text-blue-400 font-mono">
-                            {formatNumber(gameState.focus || 0)}
+                        <span className="text-base md:text-xl font-bold text-violet-400 font-mono">
+                            {formatNumber(gameState.activeEnergy || 0)}
                         </span>
-                        <span className="text-[8px] md:text-[9px] text-blue-400 font-bold uppercase tracking-widest leading-none">
-                            Focus
+                        <span className="text-[8px] md:text-[9px] text-violet-400 font-bold uppercase tracking-widest leading-none">
+                            Energy
                         </span>
                     </div>
                 </div>
             )}
 
-            {gameState.flux?.gt(0) && (
+            {gameState.stabilityEssence?.gt(0) && (
                 <div className="flex items-center gap-1 md:gap-2 border-l border-border/30 pl-2 md:pl-6">
                     <div className="flex flex-col items-end leading-none">
-                        <span className="text-base md:text-xl font-bold text-amber-500 font-mono">
-                            {formatNumber(gameState.flux || 0)}
+                        <span className="text-base md:text-xl font-bold text-orange-500 font-mono">
+                            {formatNumber(gameState.stabilityEssence || 0)}
                         </span>
-                        <span className="text-[8px] md:text-[9px] text-amber-500 font-bold uppercase tracking-widest leading-none">
-                            Flux
+                        <span className="text-[8px] md:text-[9px] text-orange-500 font-bold uppercase tracking-widest leading-none">
+                            Essence
                         </span>
                     </div>
                 </div>
@@ -118,7 +103,7 @@ const Layout = ({ children }) => {
             <header className="flex-none w-full px-4 md:px-8 py-3 md:py-4 flex justify-between items-center z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
                 <div className="text-left z-10">
                     <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-primary select-none hidden sm:block">
-                        Chronos Iteratio
+                        Breaking Eternity
                     </h1>
                 </div>
 

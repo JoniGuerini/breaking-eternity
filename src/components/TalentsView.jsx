@@ -35,7 +35,7 @@ const TalentNode = memo(({
     const Icon = Icons[talent.icon] || Icons.HelpCircle;
 
     const currency = talent.path;
-    const isFocus = currency === TALENT_CURRENCIES.FOCUS;
+    const isFocus = currency === TALENT_CURRENCIES.ACTIVE;
 
     // Calculate cost for tooltip only
     const cost = !isMaxed ? talent.getCost(level) : null;
@@ -44,9 +44,9 @@ const TalentNode = memo(({
     const cx = CENTER_X + (talent.position.x * X_GAP);
     const cy = START_Y - (talent.position.y * Y_GAP);
 
-    const color = isFocus ? 'blue' : 'amber';
-    const ringColor = isFocus ? 'ring-blue-400' : 'ring-amber-400';
-    const textColor = isFocus ? 'text-blue-400' : 'text-amber-400';
+    const color = isFocus ? 'violet' : 'orange';
+    const ringColor = isFocus ? 'ring-violet-400' : 'ring-orange-400';
+    const textColor = isFocus ? 'text-violet-400' : 'text-orange-400';
 
     const handleBuy = (e) => {
         e.stopPropagation();
@@ -86,7 +86,7 @@ const TalentNode = memo(({
                                 cx={cx}
                                 cy={cy}
                                 r={(NODE_SIZE / 2) * (Math.min(level, talent.maxLevel) / talent.maxLevel)}
-                                className={`${isFocus ? 'fill-blue-500' : 'fill-amber-500'} opacity-30`}
+                                className={`${isFocus ? 'fill-violet-500' : 'fill-orange-500'} opacity-30`}
                             />
                         )}
 
@@ -139,7 +139,7 @@ const TalentNode = memo(({
                             <div className="mt-3 bg-zinc-900 rounded p-2 flex justify-between items-center border border-white/5">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Upgrade Cost</span>
                                 <span className={`font-mono font-bold ${canAfford ? 'text-white' : 'text-red-400'}`}>
-                                    {formatNumber(cost)} {currency}
+                                    {formatNumber(cost)} {isFocus ? 'Energy' : 'Essence'}
                                 </span>
                             </div>
                         ) : (
@@ -168,8 +168,8 @@ const ConnectionLine = memo(({ start, end, color, isActive }) => {
             x2={end.x}
             y2={end.y}
             className={`stroke-2 transition-all duration-700 ${isActive
-                ? (color === 'blue' ? 'stroke-blue-400' : 'stroke-amber-400')
-                : (color === 'blue' ? 'stroke-blue-500/10' : 'stroke-amber-500/10')
+                ? (color === 'violet' ? 'stroke-violet-400' : 'stroke-orange-400')
+                : (color === 'violet' ? 'stroke-violet-500/10' : 'stroke-orange-500/10')
                 }`}
             strokeDasharray={isActive ? "0" : "4"}
         />
@@ -177,14 +177,15 @@ const ConnectionLine = memo(({ start, end, color, isActive }) => {
 });
 
 const HeaderStats = ({ type, balance, activeTime, nextPointTime }) => {
-    const isFocus = type === TALENT_CURRENCIES.FOCUS;
-    const color = isFocus ? 'text-blue-400' : 'text-amber-400';
-    const bg = isFocus ? 'bg-blue-500' : 'bg-amber-500';
+    const isFocus = type === TALENT_CURRENCIES.ACTIVE;
+    const color = isFocus ? 'text-violet-400' : 'text-orange-400';
+    const bg = isFocus ? 'bg-violet-500' : 'bg-orange-500';
+    const label = isFocus ? 'Active Energy' : 'Stability Essence';
 
     return (
         <div className="flex flex-col gap-2 min-w-[200px]">
             <div className="flex justify-between items-baseline">
-                <span className={`text-xs font-black uppercase tracking-widest ${color}`}>{type}</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${color}`}>{label}</span>
                 <span className="text-xl font-bold font-mono">{formatNumber(balance)}</span>
             </div>
             {isFocus ? (
@@ -198,8 +199,8 @@ const HeaderStats = ({ type, balance, activeTime, nextPointTime }) => {
                     />
                 </div>
             ) : (
-                <div className="flex items-center gap-2 text-[10px] uppercase text-amber-500/50 font-bold tracking-widest">
-                    <span className="animate-pulse">●</span> Offline Gen
+                <div className="flex items-center gap-2 text-[10px] uppercase text-orange-500/50 font-bold tracking-widest">
+                    <span className="animate-pulse">●</span> Offline Stability
                 </div>
             )}
         </div>
@@ -211,7 +212,7 @@ const TalentsView = () => {
     const scrollContainerRef = useRef(null);
     const [isReady, setIsReady] = React.useState(false);
 
-    const focusLevel = gameState.talents['focus_mastery'] || 0;
+    const focusLevel = gameState.talents['milestone_efficiency'] || 0; // Updated from legacy 'focus_mastery'
     const focusInterval = 60 - (focusLevel * 5);
 
     const x = useMotionValue(0);
@@ -259,7 +260,7 @@ const TalentsView = () => {
         const t = TALENT_DATA.find((x) => x.id === id);
         return t ? getCoords(t) : { x: CENTER_X, y: START_Y };
     };
-    const getColorById = (id) => (TALENT_DATA.find((t) => t.id === id)?.path === TALENT_CURRENCIES.FOCUS ? 'blue' : 'amber');
+    const getColorById = (id) => (TALENT_DATA.find((t) => t.id === id)?.path === TALENT_CURRENCIES.ACTIVE ? 'violet' : 'orange');
     const originCoords = { x: CENTER_X, y: START_Y };
 
     // --- MEMOIZED RENDER DATA ---
@@ -287,7 +288,7 @@ const TalentsView = () => {
         });
 
         return { nodes, edges };
-    }, [gameState.talents, gameState.focus, gameState.flux]);
+    }, [gameState.talents, gameState.activeEnergy, gameState.stabilityEssence]);
 
     return (
         <div className="h-full w-full flex flex-col relative overflow-hidden bg-zinc-950">
@@ -310,14 +311,14 @@ const TalentsView = () => {
                 </div>
                 <div className="flex gap-12 pointer-events-auto">
                     <HeaderStats
-                        type={TALENT_CURRENCIES.FOCUS}
-                        balance={gameState.focus}
+                        type={TALENT_CURRENCIES.ACTIVE}
+                        balance={gameState.activeEnergy}
                         activeTime={gameState.activeTime}
                         nextPointTime={focusInterval}
                     />
                     <HeaderStats
-                        type={TALENT_CURRENCIES.FLUX}
-                        balance={gameState.flux}
+                        type={TALENT_CURRENCIES.STABILITY}
+                        balance={gameState.stabilityEssence}
                     />
                 </div>
             </div>
@@ -349,7 +350,7 @@ const TalentsView = () => {
                                     <line
                                         key={edge.key}
                                         x1={edge.start.x} y1={edge.start.y} x2={edge.end.x} y2={edge.end.y}
-                                        className={`transition-opacity duration-700 ${edge.color === 'blue' ? 'stroke-blue-500/40' : 'stroke-amber-500/40'} stroke-2`}
+                                        className={`transition-opacity duration-700 ${edge.color === 'violet' ? 'stroke-violet-500/40' : 'stroke-orange-500/40'} stroke-2`}
                                     />
                                 ) : (
                                     <ConnectionLine

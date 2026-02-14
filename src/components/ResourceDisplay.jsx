@@ -17,7 +17,7 @@ const ResourceDisplay = () => {
                         size="lg"
                         className="font-bold text-base px-8 py-6 rounded-full shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all duration-300 hover:scale-105 active:scale-95"
                     >
-                        Claim 1 Iteron
+                        Claim 1 Fragment
                     </Button>
                 </div>
             )}

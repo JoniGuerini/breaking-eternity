@@ -9,86 +9,54 @@ export const formatNumber = (val, options = { precision: 0, growthRate: null }) 
     // Determine the sign and work with absolute value
     const absDecimal = decimal.abs();
 
-    // Handle numbers smaller than 1,000,000 (No abbreviation, just commas)
-    if (absDecimal.lt(1000000)) {
-        // Floor to prevent rounding up (e.g. 3.9 should stay 3)
-        if (absDecimal.lt(1000)) {
-            return Math.floor(decimal.toNumber()).toLocaleString();
+    // Use pt-BR locale for formatting (comma for decimals, dot for thousands)
+    const locale = 'pt-BR';
+
+    // Rule 1: < 1.000 (0,00 to 999,99)
+    if (absDecimal.lt(1000)) {
+        try {
+            return decimal.toNumber().toLocaleString(locale, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        } catch (e) {
+            return decimal.toNumber().toFixed(2).replace('.', ',');
         }
-        // Format with commas: 123,456
-        return decimal.floor().toNumber().toLocaleString();
     }
 
-    // Handle large numbers with suffixes (Starts at 1,000,000 = 10^6 = Index 2)
-    // Index 0 = < 1000 (handled above)
-    // Index 1 = K (10^3) -> K is actually index 1 in STANDARD_SUFFIXES
-    // Wait, let's align indices:
-    // log10 / 3:
-    // 3..5 -> 1 -> K
-    // 6..8 -> 2 -> M
-    // 9..11 -> 3 -> B
-    // 12..14 -> 4 -> T
-    // 15..17 -> 5 -> AA
+    // Rule 2: 1.000 to 999.999 (No decimals)
+    if (absDecimal.lt(1000000)) {
+        return decimal.toNumber().toLocaleString(locale, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+    }
 
+    // Rule 3: >= 1.000.000 (2 decimals, with suffix)
     const exponent = absDecimal.log10();
     const suffixIndex = Math.floor(exponent / 3);
-
-    // Determine suffix
-    let suffix = '';
-
-    if (suffixIndex < STANDARD_SUFFIXES.length) {
-        // Use standard K, M, B, T
-        suffix = STANDARD_SUFFIXES[suffixIndex];
-    } else {
-        // Use Generalized Alphabet System starting from Quadrillions (10^15 = Index 5)
-        // Index 5 -> AA
-        // We want to map suffixIndices to a bijective base-26 system
-        // "AA" corresponds to value 27 in standard bijective (A=1...Z=26, AA=27)
-        // So offset needed is: (suffixIndex - 5) + 27
-
-        // Calculate value for bijective system
-        let n = (suffixIndex - 5) + 27;
-        let suffixStr = "";
-
-        // Standard Bijective Algorithm (1-based to A-Z)
-        while (n > 0) {
-            n--; // Adjust to 0-based for modulo
-            suffixStr = String.fromCharCode(65 + (n % 26)) + suffixStr;
-            n = Math.floor(n / 26);
-        }
-
-        // Cap at 5 letters (ZZZZZ) to prevent UI overflow
-        if (suffixStr.length > 5) {
-            // Fallback to scientific for numbers beyond ZZZZZ
-            return decimal.toExponential(2).replace('+', '');
-        }
-
-        suffix = suffixStr;
-    }
-
     const divisor = Decimal.pow(10, suffixIndex * 3);
     const mantissa = decimal.div(divisor);
 
-    // Dynamic precision based on growth rate
-    let precision = options.precision;
-    let minPrecision = 0;
-
-    // If growthRate is provided and we're showing abbreviated numbers
-    if (options.growthRate && options.growthRate instanceof Decimal) {
-        const growthMagnitude = options.growthRate.abs();
-        const currentMagnitude = divisor;
-
-        if (growthMagnitude.gte(currentMagnitude)) {
-            precision = 0;
-            minPrecision = 0;
-        } else {
-            precision = 3;
-            minPrecision = 3;
+    let suffix = '';
+    if (suffixIndex < STANDARD_SUFFIXES.length) {
+        suffix = STANDARD_SUFFIXES[suffixIndex];
+    } else {
+        let n = (suffixIndex - 5) + 27;
+        let suffixStr = "";
+        while (n > 0) {
+            n--;
+            suffixStr = String.fromCharCode(65 + (n % 26)) + suffixStr;
+            n = Math.floor(n / 26);
         }
+        if (suffixStr.length > 5) {
+            return decimal.toExponential(2).replace('+', '').replace('.', ',');
+        }
+        suffix = suffixStr;
     }
 
-    return mantissa.toNumber().toLocaleString(undefined, {
-        minimumFractionDigits: 0,
+    return mantissa.toNumber().toLocaleString(locale, {
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }) + ' ' + suffix;
 };
