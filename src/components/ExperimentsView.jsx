@@ -11,14 +11,20 @@ import { CheckCircle2, Circle, Trophy } from 'lucide-react';
 import Decimal from 'break_eternity.js';
 
 const ExperimentsView = () => {
-    const { gameState, claimMissionReward, getXPRequired } = useGame();
+    const { gameState, claimMissionReward, getXPRequired, rankUp } = useGame();
     if (!gameState) return null;
     const { completedMissions, missionStats, iterons, experimentRank, experimentXP } = gameState;
 
+    const xpReq = getXPRequired(experimentRank);
+    const xpPercent = (experimentXP / xpReq) * 100;
+    const canRankUp = experimentXP >= xpReq;
+
     const missionList = useMemo(() => {
-        const available = MISSIONS.filter(m => m.minRank <= experimentRank);
+        // Show active missions ONLY from current rank
+        // Show completed missions from ALL ranks
+        const available = MISSIONS.filter(m => m.minRank === experimentRank || completedMissions.includes(m.id));
         const completed = available.filter(m => completedMissions.includes(m.id));
-        const active = available.filter(m => !completedMissions.includes(m.id));
+        const active = available.filter(m => !completedMissions.includes(m.id) && m.minRank === experimentRank);
 
         return [...active, ...completed]
             .map(mission => {
@@ -26,7 +32,12 @@ const ExperimentsView = () => {
                 let progress = new Decimal(0);
                 if (mission.type === MISSION_TYPES.REACH_MILESTONES) progress = new Decimal(missionStats.totalMilestones);
                 if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = iterons;
-                if (mission.type === MISSION_TYPES.STABILITY_TIME) progress = new Decimal(missionStats.consecutiveStableTime);
+                if (mission.type === MISSION_TYPES.DEPOSIT_FRAGMENTS) progress = missionStats.totalDeposited || new Decimal(0);
+                if (mission.type === MISSION_TYPES.OWN_GENERATOR) progress = gameState.generators[mission.genId].amount;
+                if (mission.type === MISSION_TYPES.BUY_RESEARCH) {
+                    const totalLevels = Object.values(gameState.research || {}).reduce((sum, lvl) => sum + lvl, 0);
+                    progress = new Decimal(totalLevels);
+                }
 
                 const canClaim = !isCompleted && progress.gte(mission.target);
                 const progressPercent = Math.min(100, progress.div(mission.target).toNumber() * 100);
@@ -38,10 +49,44 @@ const ExperimentsView = () => {
                 if (!a.isCompleted && b.isCompleted) return -1;
                 return b.minRank - a.minRank;
             });
-    }, [completedMissions, missionStats, iterons, experimentRank]);
+    }, [completedMissions, missionStats, iterons, experimentRank, gameState.generators, gameState.research]);
 
     return (
         <div className="w-full h-full flex flex-col gap-4">
+            {/* Rank Progress Bar / Level Up Button */}
+            <div
+                className={`relative flex items-center gap-4 bg-card border rounded-xl px-4 py-3 shadow-sm transition-all duration-300 ${canRankUp
+                    ? 'border-primary ring-2 ring-primary/20 cursor-pointer hover:bg-primary/5'
+                    : 'border-border'
+                    }`}
+                onClick={() => canRankUp && rankUp()}
+            >
+                <div className="flex flex-col min-w-[100px]">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70 leading-none mb-1">
+                        {canRankUp ? 'Promotion Ready' : 'Scientist Rank'}
+                    </span>
+                    <span className="text-base font-black leading-none text-foreground tracking-tighter">Level {experimentRank}</span>
+                </div>
+
+                <div className="flex-1 space-y-1.5">
+                    <div className="flex justify-between items-end text-[10px] font-mono font-bold tracking-tight">
+                        <span className="text-muted-foreground uppercase opacity-50 tracking-widest">
+                            {canRankUp ? 'CLICK HERE TO ADVANCE SCIENTIST RANK' : 'Curiosity Growth'}
+                        </span>
+                        <span className="text-primary/90">{experimentXP} / {xpReq} XP</span>
+                    </div>
+                    <Progress
+                        value={xpPercent}
+                        className={`h-2 ${canRankUp ? 'bg-primary/30' : 'bg-primary/10'}`}
+                        indicatorClassName={`${canRankUp ? 'bg-primary animate-pulse' : 'bg-primary'} shadow-[0_0_10px_rgba(var(--primary),0.3)]`}
+                    />
+                </div>
+
+                {canRankUp && (
+                    <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none rounded-xl" />
+                )}
+            </div>
+
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 pb-8">
                 {missionList.map((mission) => (
                     <Card

@@ -64,11 +64,28 @@ const GeneratorRow = ({
     const isActive = timeLeft > 0;
 
     const baseMaintenanceRate = useMemo(() => {
-        // Maintenance is based on current rank threshold (nextMilestone.prev)
-        const baseProd = new Decimal(0.01);
-        const threshold = nextMilestone.prev || new Decimal(0);
-        return baseProd.times(threshold).times(0.02);
-    }, [nextMilestone.prev]);
+        const rank = nextMilestone.level;
+        if (rank <= 0) return new Decimal(0);
+
+        const tier = generator.id;
+        // Base Cost: (Rank + Tier) * 0.01
+        const baseCost = (rank + tier) * 0.01;
+
+        // Upgrade Tax: (Tier + 1) * 0.01 per rank of Efficiency and Resonance
+        // Logistics Buffer (speedLevel) is exempt from tax and provides relief
+        const speedLevel = research[`gen${tier + 1}_speed`] || 0;
+        const effLevel = research[`gen${tier + 1}_eff`] || 0;
+        const resonanceLevel = research[`gen${tier + 1}_resonance`] || 0;
+        const totalTaxedUpgrades = effLevel + resonanceLevel;
+
+        const taxPerLevel = (tier + 1) * 0.01;
+        const totalTax = totalTaxedUpgrades * taxPerLevel;
+
+        // Logistics Buffer: -0.01 per level
+        const buffer = speedLevel * 0.01;
+
+        return new Decimal(baseCost + totalTax - buffer).max(0);
+    }, [nextMilestone.level, generator.id, research]);
 
     const insightMultiplier = useMemo(() => {
         const level = research[`gen${generator.id + 1}_resonance`] || 0;
@@ -236,7 +253,7 @@ const GeneratorRow = ({
                                                     )}
                                                     <div className="flex justify-between gap-4 pt-1">
                                                         <span className="text-emerald-400 font-bold">Production: x5</span>
-                                                        <span className="text-red-400 font-bold">Stability Cost: x20</span>
+                                                        <span className="text-red-400 font-bold">Stability Cost: x5</span>
                                                     </div>
                                                 </div>
                                             </TooltipContent>

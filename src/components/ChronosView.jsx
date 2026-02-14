@@ -8,8 +8,8 @@ import { formatNumber, formatTime } from '../utils/formatUtils';
 import Decimal from 'break_eternity.js';
 
 const ChronosView = () => {
-    const { gameState, depositInTreasury, getMaintenanceRate } = useGame();
-    const { iterons, treasuryIterons } = gameState;
+    const { gameState, depositInTreasury, getMaintenanceRate, getGeneratorMaintenance } = useGame();
+    const { iterons, treasuryIterons, generators } = gameState;
 
     const maintenanceRate = getMaintenanceRate();
     const expansionLevel = gameState.talents?.['reservoir_expansion'] || 0;
@@ -21,6 +21,14 @@ const ChronosView = () => {
 
 
     const isDepleted = treasuryIterons.lte(0) && maintenanceRate.gt(0);
+
+    // Calculate per-generator maintenance
+    const genMaintenance = generators.map((gen, i) => {
+        if (gen.amount.lte(0)) return null;
+        const cost = getGeneratorMaintenance(i);
+        if (cost.lte(0)) return null;
+        return { id: i, cost };
+    }).filter(Boolean);
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-8 pb-32 fade-in-animation h-full overflow-y-auto">
@@ -113,6 +121,45 @@ const ChronosView = () => {
                 </Card>
             </div>
 
+            {/* Stability Report */}
+            {genMaintenance.length > 0 && (
+                <Card className="border border-border/50 bg-card shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted/30 py-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <TrendingDown className="w-4 h-4 text-primary" />
+                                <CardTitle className="text-sm font-bold uppercase tracking-wider">Stability Report</CardTitle>
+                            </div>
+                            <div className="text-xs font-mono font-bold text-destructive">
+                                Total Consumption: -{formatNumber(maintenanceRate)}/s
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="divide-y divide-border/30">
+                            {genMaintenance.map((item) => (
+                                <div key={item.id} className="grid grid-cols-2 gap-4 px-6 py-3 items-center hover:bg-muted/10 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                                            #{item.id + 1}
+                                        </div>
+                                        <span className="text-xs font-bold text-foreground/80">Generator {item.id + 1}</span>
+                                    </div>
+                                    <div className="flex justify-end items-center gap-2">
+                                        <span className="text-xs font-mono font-bold text-destructive">-{formatNumber(item.cost)}/s</span>
+                                        <span className="text-[10px] font-medium text-muted-foreground w-12 text-right">
+                                            {maintenanceRate.gt(0)
+                                                ? ((item.cost.toNumber() / maintenanceRate.toNumber()) * 100).toFixed(1)
+                                                : 0}%
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Educational Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-24">
                 <Card className="bg-muted/20 border-border/50">
@@ -124,7 +171,7 @@ const ChronosView = () => {
                     </CardHeader>
                     <CardContent className="text-xs text-muted-foreground space-y-3 leading-relaxed">
                         <p>To keep reality stable while you are away, the Void requires a steady flow of <strong>Eternity Fragments</strong>.</p>
-                        <p>The base stabilization cost is only <strong>2% of the base production</strong> of each Generator. Use <strong>Reservoir Optimization</strong> research to reduce this value even further.</p>
+                        <p>The stabilization cost is based on the <strong>current Rank and Tier</strong> of each generator. Each improvement (Speed, Efficiency, Resonance) adds an <strong>Upgrade Tax</strong> to the maintenance cost.</p>
                     </CardContent>
                 </Card>
 

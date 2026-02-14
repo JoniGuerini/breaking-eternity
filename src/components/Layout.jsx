@@ -66,28 +66,15 @@ const HeaderResourceDisplay = () => {
                 </div>
             )}
 
-            {/* Talent Resources (Active Energy & Stability Essence) */}
-            {(gameState.activeEnergy?.gt(0) || gameState.activeTime > 0) && (
+            {/* Talent Points Display */}
+            {(gameState.talentPoints > 0 || gameState.experimentRank > 1) && (
                 <div className="flex items-center gap-1 md:gap-2 border-l border-border/30 pl-2 md:pl-6">
                     <div className="flex flex-col items-end leading-none">
-                        <span className="text-base md:text-xl font-bold text-violet-400 font-mono">
-                            {formatNumber(gameState.activeEnergy || 0)}
+                        <span className="text-base md:text-xl font-black text-emerald-400 font-mono">
+                            {gameState.talentPoints}
                         </span>
-                        <span className="text-[8px] md:text-[9px] text-violet-400 font-bold uppercase tracking-widest leading-none">
-                            Energy
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {gameState.stabilityEssence?.gt(0) && (
-                <div className="flex items-center gap-1 md:gap-2 border-l border-border/30 pl-2 md:pl-6">
-                    <div className="flex flex-col items-end leading-none">
-                        <span className="text-base md:text-xl font-bold text-orange-500 font-mono">
-                            {formatNumber(gameState.stabilityEssence || 0)}
-                        </span>
-                        <span className="text-[8px] md:text-[9px] text-orange-500 font-bold uppercase tracking-widest leading-none">
-                            Essence
+                        <span className="text-[8px] md:text-[9px] text-emerald-400 font-bold uppercase tracking-widest leading-none">
+                            Talent Points
                         </span>
                     </div>
                 </div>

@@ -5,27 +5,27 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     const genIndex = i;
     const genNum = i + 1;
 
-    // Logistics Research (Maintenance Reduction)
+    // Logistics Research (Maintenance Buffer)
     const speedItem = {
-        id: `gen${genNum}_speed`, // Kept ID for save compatibility
-        name: `Reservoir Optimization ${genNum}`,
+        id: `gen${genNum}_speed`,
+        name: `Logistics Buffer ${genNum}`,
         target: `Generator ${genNum}`,
         type: 'Logistics',
         maxLevel: 20,
         getCost: (level) => new Decimal(Math.pow(genNum, 2)).times(new Decimal(2).pow(level)),
-        getValue: (level) => Math.pow(0.9, level), // 10% reduction per level
-        baseDescription: "Reduces stabilization cost by 10%",
+        getValue: (level) => level * 0.01,
+        baseDescription: "Reduces maintenance by 0.01/s",
         getEffectValues: (level) => {
-            const current = Math.pow(0.9, level) * 100;
-            const next = Math.pow(0.9, level + 1) * 100;
+            const current = level * 0.01;
+            const next = (level + 1) * 0.01;
             return {
-                current: `${current.toFixed(1)}%`,
-                next: `${next.toFixed(1)}%`
+                current: `-${current.toFixed(2)}/s`,
+                next: `-${next.toFixed(2)}/s`
             };
         },
         getEffectDisplay: (level) => {
-            const val = Math.pow(0.9, level) * 100;
-            return `${val.toFixed(1)}% cost`;
+            const val = level * 0.01;
+            return `-${val.toFixed(2)} maintenance`;
         },
         condition: (gameState) => {
             const gen = gameState.generators[genIndex];

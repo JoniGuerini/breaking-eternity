@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, memo } from 'react';
 import { useGame } from '../game/gameState';
-import { TALENT_DATA, TALENT_CURRENCIES, TALENT_TREE_EDGES } from '../game/talentData';
+import { TALENT_DATA, TALENT_TREE_EDGES } from '../game/talentData';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from '../utils/formatUtils';
@@ -34,19 +34,16 @@ const TalentNode = memo(({
     const isMaxed = level >= talent.maxLevel;
     const Icon = Icons[talent.icon] || Icons.HelpCircle;
 
-    const currency = talent.path;
-    const isFocus = currency === TALENT_CURRENCIES.ACTIVE;
-
     // Calculate cost for tooltip only
-    const cost = !isMaxed ? talent.getCost(level) : null;
+    const cost = 1;
 
     // --- Layout Logic (Vertical Rotation) ---
     const cx = CENTER_X + (talent.position.x * X_GAP);
     const cy = START_Y - (talent.position.y * Y_GAP);
 
-    const color = isFocus ? 'violet' : 'orange';
-    const ringColor = isFocus ? 'ring-violet-400' : 'ring-orange-400';
-    const textColor = isFocus ? 'text-violet-400' : 'text-orange-400';
+    const color = 'emerald';
+    const ringColor = 'ring-emerald-400';
+    const textColor = 'text-emerald-400';
 
     const handleBuy = (e) => {
         e.stopPropagation();
@@ -86,7 +83,7 @@ const TalentNode = memo(({
                                 cx={cx}
                                 cy={cy}
                                 r={(NODE_SIZE / 2) * (Math.min(level, talent.maxLevel) / talent.maxLevel)}
-                                className={`${isFocus ? 'fill-violet-500' : 'fill-orange-500'} opacity-30`}
+                                className="fill-emerald-500 opacity-30"
                             />
                         )}
 
@@ -139,7 +136,7 @@ const TalentNode = memo(({
                             <div className="mt-3 bg-muted/30 rounded p-2 flex justify-between items-center border border-border/50">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Upgrade Cost</span>
                                 <span className={`font-mono font-bold ${canAfford ? 'text-foreground' : 'text-red-400'}`}>
-                                    {formatNumber(cost)} {isFocus ? 'Energy' : 'Essence'}
+                                    1 Point
                                 </span>
                             </div>
                         ) : (
@@ -176,34 +173,17 @@ const ConnectionLine = memo(({ start, end, color, isActive }) => {
     );
 });
 
-const HeaderStats = ({ type, balance, activeTime, nextPointTime }) => {
-    const isFocus = type === TALENT_CURRENCIES.ACTIVE;
-    const color = isFocus ? 'text-violet-400' : 'text-orange-400';
-    const bg = isFocus ? 'bg-violet-500' : 'bg-orange-500';
-    const label = isFocus ? 'Energy' : 'Essence';
-
+const HeaderStats = ({ balance }) => {
     return (
-        <div className="flex flex-col gap-1 min-w-[120px] bg-card/30 p-3 rounded-xl border border-border/50">
+        <div className="flex flex-col gap-1 min-w-[150px] bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/30">
             <div className="flex justify-between items-baseline gap-4">
-                <span className={`text-[9px] font-black uppercase tracking-widest ${color}`}>{label}</span>
-                <span className="text-lg font-bold font-mono">{formatNumber(balance)}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Available Points</span>
+                <span className="text-xl font-black font-mono text-emerald-400">{balance}</span>
             </div>
-            {isFocus ? (
-                <div className="h-1 w-full bg-muted/50 rounded-full overflow-hidden">
-                    <div
-                        className={`h-full ${bg}`}
-                        style={{
-                            width: `${(activeTime / nextPointTime) * 100}%`,
-                            transition: (activeTime / nextPointTime) < 0.01 ? 'none' : 'width 0.3s linear'
-                        }}
-                    />
-                </div>
-            ) : (
-                <div className="text-[8px] uppercase text-orange-500/50 font-bold tracking-[0.2em] flex items-center gap-1.5">
-                    <Icons.TrendingUp size={10} className="animate-pulse" />
-                    Offline Sync
-                </div>
-            )}
+            <div className="text-[8px] uppercase text-emerald-500/50 font-bold tracking-[0.2em] flex items-center gap-1.5">
+                <Icons.Trophy size={10} className="animate-pulse" />
+                Scientific Merit
+            </div>
         </div>
     );
 };
@@ -213,8 +193,7 @@ const TalentsView = () => {
     const scrollContainerRef = useRef(null);
     const [isReady, setIsReady] = React.useState(false);
 
-    const focusLevel = gameState.talents['milestone_efficiency'] || 0; // Updated from legacy 'focus_mastery'
-    const focusInterval = 60 - (focusLevel * 5);
+    const focusLevel = gameState.talents['milestone_efficiency'] || 0;
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -261,7 +240,7 @@ const TalentsView = () => {
         const t = TALENT_DATA.find((x) => x.id === id);
         return t ? getCoords(t) : { x: CENTER_X, y: START_Y };
     };
-    const getColorById = (id) => (TALENT_DATA.find((t) => t.id === id)?.path === TALENT_CURRENCIES.ACTIVE ? 'violet' : 'orange');
+    const getColorById = (id) => 'emerald';
     const originCoords = { x: CENTER_X, y: START_Y };
 
     // --- MEMOIZED RENDER DATA ---
@@ -269,8 +248,7 @@ const TalentsView = () => {
         const nodes = TALENT_DATA.map(talent => {
             const level = gameState.talents[talent.id] || 0;
             const isMaxed = level >= talent.maxLevel;
-            const currency = talent.path;
-            const canAfford = !isMaxed && gameState[currency].gte(talent.getCost(level));
+            const canAfford = !isMaxed && gameState.talentPoints >= 1;
 
             const edgesToNode = TALENT_TREE_EDGES.filter(e => e.to === talent.id);
             const isRoot = edgesToNode.some(e => e.from === null);
@@ -289,7 +267,7 @@ const TalentsView = () => {
         });
 
         return { nodes, edges };
-    }, [gameState.talents, gameState.activeEnergy, gameState.stabilityEssence]);
+    }, [gameState.talents, gameState.talentPoints]);
 
     return (
         <div className="h-full w-full flex flex-col relative overflow-hidden bg-zinc-950">
@@ -309,16 +287,9 @@ const TalentsView = () => {
                         <Icons.RotateCcw size={16} />
                     </Button>
                 </div>
-                <div className="flex gap-12 pointer-events-auto">
+                <div className="flex gap-4 pointer-events-auto">
                     <HeaderStats
-                        type={TALENT_CURRENCIES.ACTIVE}
-                        balance={gameState.activeEnergy}
-                        activeTime={gameState.activeTime}
-                        nextPointTime={focusInterval}
-                    />
-                    <HeaderStats
-                        type={TALENT_CURRENCIES.STABILITY}
-                        balance={gameState.stabilityEssence}
+                        balance={gameState.talentPoints}
                     />
                 </div>
             </div>

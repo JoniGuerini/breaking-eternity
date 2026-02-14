@@ -18,24 +18,20 @@ const INITIAL_STATE = {
         costBase: new Decimal(1).times(new Decimal(10).pow(i)),
     })),
     lastTick: Date.now(),
-    showFPS: true, // FPS counter enabled by default
-    research: {}, // Map of unlocked research IDs to Levels { 'gen1_speed': 1 }
-    // Treasury System (Offline)
+    showFPS: true,
+    research: {},
     treasuryIterons: new Decimal(0),
-    offlineGap: 0, // Seconds since last session (not claimed yet)
+    offlineGap: 0,
     isTimeShiftDismissed: false,
-    activeTime: 0, // Counter for active energy gain
-    talents: {}, // { talent_id: level }
-    playtime: 0, // Total seconds played
-    activeEnergy: new Decimal(0), // Earned while online
-    stabilityEssence: new Decimal(0), // Earned from stable offline time
-    focus: new Decimal(0), // Legacy support
-    flux: new Decimal(0), // Legacy support
-    overclockActive: {}, // { genId: boolean }
-    completedMissions: [], // [id1, id2]
+    activeTime: 0,
+    talents: {},
+    playtime: 0,
+    talentPoints: 0,
+    overclockActive: {},
+    completedMissions: [],
     missionStats: {
         totalMilestones: 0,
-        consecutiveStableTime: 0
+        totalDeposited: new Decimal(0)
     },
     experimentRank: 1,
     experimentXP: 0
@@ -43,281 +39,50 @@ const INITIAL_STATE = {
 
 export const GameProvider = ({ children }) => {
     const [gameState, setGameState] = useState(INITIAL_STATE);
-    const stateRef = useRef(gameState); // Use ref for the game loop to avoid closure staleness
+    const stateRef = useRef(gameState);
 
     // Sync ref with state
     stateRef.current = gameState;
 
-    // Serialization helper
-    const serializeState = (state) => {
-        return JSON.stringify(state);
-    };
+    // --- SERIALIZATION ---
+    const serializeState = (state) => JSON.stringify(state);
 
-    // Deserialization helper
     const deserializeState = (json) => {
         const parsed = JSON.parse(json);
-
-        // Re-instantiate Decimals
         parsed.iterons = new Decimal(parsed.iterons);
-        parsed.insight = parsed.insight ? new Decimal(parsed.insight) : new Decimal(0); // Migration for old saves
+        parsed.insight = parsed.insight ? new Decimal(parsed.insight) : new Decimal(0);
         parsed.generators = parsed.generators.map(g => ({
             ...g,
             amount: new Decimal(g.amount),
             bought: new Decimal(g.bought),
             multiplier: new Decimal(g.multiplier),
             costBase: new Decimal(g.costBase),
-            costGrowth: new Decimal(g.costGrowth),
         }));
-
         parsed.treasuryIterons = new Decimal(parsed.treasuryIterons || 0);
-        parsed.playtime = parsed.playtime || 0;
+        parsed.talentPoints = parsed.talentPoints || 0;
 
-
-        // Migration: Convert Array to Object if needed
-        if (Array.isArray(parsed.research)) {
-            const oldResearch = parsed.research;
-            parsed.research = {};
-            // Map old boolean upgrades to Level 5 (half speed)
-            if (oldResearch.includes('gen1_speed_1')) parsed.research['gen1_speed'] = 5;
-            if (oldResearch.includes('gen2_speed_1')) parsed.research['gen2_speed'] = 5;
-        }
         parsed.research = parsed.research || {};
-
-        // Ensure legacy saves or missing fields don't break things (basic migration)
-        if (!parsed.lastTick) parsed.lastTick = Date.now();
-        // Removed .floor() to allow for pure decimal accumulation
-
-        parsed.storedTime = parsed.storedTime || 0;
-        parsed.maxStoredTime = parsed.maxStoredTime || parsed.storedTime || 0;
-        parsed.isWarping = false; // Never start warping on load
-        parsed.warpSpeed = parsed.warpSpeed || 20;
-        parsed.isTimeShiftDismissed = parsed.isTimeShiftDismissed || false;
-
-        // Talents (Pre-Rebranding Migration)
-        parsed.activeEnergy = new Decimal(parsed.activeEnergy || parsed.focus || 0);
-        parsed.stabilityEssence = new Decimal(parsed.stabilityEssence || parsed.flux || 0);
-        parsed.activeTime = parsed.activeTime || 0;
         parsed.talents = parsed.talents || {};
         parsed.overclockActive = parsed.overclockActive || {};
         parsed.completedMissions = parsed.completedMissions || [];
-        parsed.missionStats = parsed.missionStats || { totalMilestones: 0, consecutiveStableTime: 0 };
-
-        parsed.experimentRank = parsed.experimentRank || 1;
-        parsed.experimentXP = parsed.experimentXP || 0;
+        parsed.missionStats = parsed.missionStats || { totalMilestones: 0, totalDeposited: new Decimal(0) };
+        parsed.missionStats.totalDeposited = new Decimal(parsed.missionStats.totalDeposited || 0);
 
         return parsed;
     };
 
-    const saveGame = useCallback(() => {
-        try {
-            const serialized = serializeState(stateRef.current);
-            localStorage.setItem('chronos-iteratio-save', serialized);
-            console.log('Game Saved');
-        } catch (e) {
-            console.error('Failed to save game:', e);
-        }
-    }, []);
+    // --- BASIC HELPERS ---
+    const getBaseProduction = useCallback((id) => new Decimal(0.01), []);
 
-    // --- HELPERS & LOGIC ---
+    const getXPRequired = useCallback((rank) => (rank <= 10 ? 10 : 12), []);
 
-    const getBaseProduction = useCallback((id) => {
-        // Every generator starts producing 0.01/s of the previous tier
-        // Speed upgrades were removed in favor of Maintenance Logistics
-        return new Decimal(0.01);
-    }, []);
-
-    const getXPRequired = useCallback((rank) => {
-        // Base is 10 XP for levels 1-10.
-        // Increases by 2 every 10 levels.
-        const tier = Math.floor((rank - 1) / 10);
-        return 10 + (tier * 2);
-    }, []);
-
-    const countMaxedTalents = useCallback(() => {
-        const talents = stateRef.current.talents || {};
-        return TALENT_DATA.reduce((count, talent) => {
-            const level = talents[talent.id] || 0;
-            return level >= talent.maxLevel ? count + 1 : count;
-        }, 0);
-    }, []);
-
-    const getEfficiencyMultiplier = useCallback((id) => {
-        const state = stateRef.current || INITIAL_STATE;
-        const research = state.research || {};
-        const level = research[`gen${id + 1}_eff`] || 0;
-
-        const refinementLevel = state.talents?.['resonance_refinement'] || 0;
-        const refinementMult = 1 + (refinementLevel * 0.12);
-
-        // Reality Anchor: +2% per maxed talent per level
-        const anchorLevel = state.talents?.['reality_anchor'] || 0;
-        const maxedCount = countMaxedTalents();
-        const anchorMult = 1 + (anchorLevel * 0.02 * maxedCount);
-
-        // Precision Tuning: +1% per energy per level
-        const tuningLevel = state.talents?.['precision_tuning'] || 0;
-        const energyCount = state.activeEnergy.toNumber();
-        const tuningMult = 1 + (tuningLevel * 0.01 * energyCount);
-
-        const nowTs = Date.now();
-        const isOverclocked = state.overclockActive?.[id] && state.overclockActive[id] > nowTs && state.treasuryIterons.gt(0);
-        const overclockMult = isOverclocked ? 5 : 1;
-
-        return new Decimal(1 + level).times(refinementMult).times(anchorMult).times(tuningMult).times(overclockMult);
-    }, [countMaxedTalents]);
-
-    const getMaintenanceRate = useCallback((stateOverride) => {
-        const state = stateOverride || stateRef.current;
-        const research = state.research || {};
-        let totalCost = new Decimal(0);
-
-        state.generators.forEach((gen, i) => {
-            if (gen.amount.gt(0)) {
-                // Base Maintenance: 2% of base production, based on current milestone rank threshold
-                const baseProd = getBaseProduction(i);
-                const threshold = getNextMilestone(gen.amount).prev || new Decimal(0);
-                let cost = baseProd.times(threshold).times(0.02);
-
-                // Overclock Penalty: 20x cost for this specific generator
-                const nowTs = Date.now();
-                if (state.overclockActive?.[i] && state.overclockActive[i] > nowTs) {
-                    cost = cost.times(20);
-                }
-
-                // Apply Logistics reduction (10% per level multiplicative)
-                const logisticsLevel = research[`gen${i + 1}_speed`] || 0;
-                if (logisticsLevel > 0) {
-                    const reduction = Math.pow(0.9, logisticsLevel);
-                    cost = cost.times(reduction);
-                }
-
-                totalCost = totalCost.add(cost);
-            }
-        });
-
-        const stasisLevel = state.talents?.['temporal_stasis'] || 0;
-        const stasisMult = Math.max(0.1, 1 - (stasisLevel * 0.03));
-        return totalCost.times(stasisMult);
-    }, [getBaseProduction]);
-
-    const processOfflineProduction = useCallback((loadedState) => {
-        const now = Date.now();
-        const gapMs = now - loadedState.lastTick;
-        const gapSec = gapMs / 1000;
-
-        if (gapSec < 60) return loadedState; // Use 60s as threshold
-
-        const rate = getMaintenanceRate(loadedState);
-        let effectiveTime = gapSec;
-        let treasuryUsed = new Decimal(0);
-
-        if (rate.gt(0)) {
-            const expansionLevel = loadedState.talents?.['reservoir_expansion'] || 0;
-            const expansionMult = 1 + (expansionLevel * 0.2);
-            const maxAffordable = loadedState.treasuryIterons.div(rate).times(expansionMult);
-            effectiveTime = Math.min(gapSec, maxAffordable.toNumber());
-            treasuryUsed = rate.times(effectiveTime / expansionMult);
-        } else {
-            effectiveTime = 0;
-        }
-
-        const nextState = { ...loadedState };
-        nextState.treasuryIterons = nextState.treasuryIterons.sub(treasuryUsed);
-        nextState.playtime = (nextState.playtime || 0) + effectiveTime;
-
-        // Award Stability Essence (Disabled until Talent mechanics are finalized)
-        /*
-        const harvestLevel = nextState.talents?.['essence_harvest'] || 0;
-        const harvestMult = 1 + (harvestLevel * 0.15);
-        const essenceGained = new Decimal(effectiveTime).div(3600).times(harvestMult);
-        nextState.stabilityEssence = nextState.stabilityEssence.add(essenceGained);
-        */
-
-        const gens = nextState.generators.map(g => ({ ...g }));
-        const offlineLevel = nextState.talents?.['offline_refinement'] || 0;
-        const offlineMult = 1 + (offlineLevel * 0.1);
-
-        const gen0 = gens[0];
-        if (gen0.amount.gt(0)) {
-            const baseProd = getBaseProduction(0);
-            const effMult = getEfficiencyMultiplier(0);
-            const payout = gen0.amount.times(gen0.multiplier).times(effMult).times(baseProd).times(effectiveTime).times(offlineMult);
-            nextState.iterons = nextState.iterons.add(payout);
-        }
-
-        for (let i = 1; i < 50; i++) {
-            const gen = gens[i];
-            if (gen.amount.gt(0)) {
-                const baseProd = getBaseProduction(i);
-                const effMult = getEfficiencyMultiplier(i);
-                const production = gen.amount.times(gen.multiplier).times(effMult).times(baseProd).times(effectiveTime).times(offlineMult);
-                gens[i - 1].amount = gens[i - 1].amount.add(production);
-            }
-        }
-
-        nextState.generators = gens;
-        nextState.offlineResults = {
-            totalGap: gapSec,
-            effectiveTime: effectiveTime,
-            treasuryUsed: treasuryUsed,
-            depleted: effectiveTime < gapSec
-        };
-
-        return nextState;
-    }, [getMaintenanceRate, getEfficiencyMultiplier, getBaseProduction]);
-
-    const loadGame = useCallback(() => {
-        try {
-            const saved = localStorage.getItem('chronos-iteratio-save');
-            if (saved) {
-                const loadedState = deserializeState(saved);
-                const stateAfterOffline = processOfflineProduction(loadedState);
-                setGameState(stateAfterOffline);
-                stateRef.current = stateAfterOffline;
-                return stateAfterOffline;
-            }
-        } catch (e) {
-            console.error('Failed to load game:', e);
-        }
-        return null;
-    }, [processOfflineProduction]);
-
-    const hardReset = useCallback(() => {
-        localStorage.removeItem('chronos-iteratio-save');
-        setGameState(INITIAL_STATE);
-        window.location.reload(); // Reload to ensure clean slate
-    }, []);
-
-    // Auto-save loop
-    useEffect(() => {
-        const interval = setInterval(() => {
-            saveGame();
-        }, 5000); // 5 seconds
-        return () => clearInterval(interval);
-    }, [saveGame]);
-
-    // Milestone Leveling Logic
-    const calculateMultiplier = useCallback((amountDec) => {
-        // Obsolete: Milestones now grant Insights, not production multipliers.
-        return new Decimal(1);
-    }, []);
-
-    // --- GAME ACTIONS ---
     const getNextMilestone = useCallback((amountDec) => {
         const effLevel = stateRef.current.talents?.['milestone_efficiency'] || 0;
         const effMult = 1 - (effLevel * 0.02);
-
         const milestones = [10, 25, 50, 100];
-
-        let milestone = new Decimal(10);
-        let level = 0;
-        let prev = new Decimal(0);
-
         if (amountDec.lt(new Decimal(10).times(effMult).ceil())) {
             return { next: new Decimal(10).times(effMult).ceil(), level: 0, prev: new Decimal(0) };
         }
-
-        // Check static thresholds
         for (let i = 0; i < milestones.length; i++) {
             const currentM = new Decimal(milestones[i]).times(effMult).ceil();
             if (amountDec.lt(currentM)) {
@@ -328,15 +93,12 @@ export const GameProvider = ({ children }) => {
                 };
             }
         }
-
-        // Doubling logic for >= 100 base
-        milestone = new Decimal(100);
-        level = 4;
+        let milestone = new Decimal(100);
+        let level = 4;
         while (amountDec.gte(milestone.times(effMult).ceil())) {
             milestone = milestone.times(2);
             level++;
         }
-
         return {
             next: milestone.times(effMult).ceil(),
             level: level - 1,
@@ -344,361 +106,321 @@ export const GameProvider = ({ children }) => {
         };
     }, []);
 
-    // Helper: Calculate Total Insights Earned based on current generator amounts
+    const calculateMultiplier = useCallback((amountDec) => {
+        return new Decimal(1);
+    }, []);
+
+    const countMaxedTalents = useCallback(() => {
+        const talents = stateRef.current.talents || {};
+        return TALENT_DATA.reduce((count, talent) => {
+            const level = talents[talent.id] || 0;
+            return level >= talent.maxLevel ? count + 1 : count;
+        }, 0);
+    }, []);
+
+    // --- COMPLEX HELPERS ---
+    const getEfficiencyMultiplier = useCallback((id) => {
+        const state = stateRef.current || INITIAL_STATE;
+        const research = state.research || {};
+        const level = research[`gen${id + 1}_eff`] || 0;
+        const refinementLevel = state.talents?.['resonance_refinement'] || 0;
+        const refinementMult = 1 + (refinementLevel * 0.12);
+        const anchorLevel = state.talents?.['reality_anchor'] || 0;
+        const maxedCount = countMaxedTalents();
+        const anchorMult = 1 + (anchorLevel * 0.02 * maxedCount);
+        const tuningLevel = state.talents?.['precision_tuning'] || 0;
+        const tuningMult = 1 + (tuningLevel * 0.02 * state.experimentRank);
+        const feedbackLevel = state.talents?.['eternal_feedback'] || 0;
+        // Simple feedback based on playtime/rank as proxy for "total fragments" if we don't have a dedicated counter
+        const feedbackMult = 1 + (feedbackLevel * 0.05);
+        const nowTs = Date.now();
+        const isOverclocked = state.overclockActive?.[id] && state.overclockActive[id] > nowTs && state.treasuryIterons.gt(0);
+        return new Decimal(1 + level).times(refinementMult).times(anchorMult).times(tuningMult).times(feedbackMult).times(isOverclocked ? 5 : 1);
+    }, [countMaxedTalents]);
+
+    const getGeneratorMaintenance = useCallback((id, stateOverride) => {
+        const state = stateOverride || stateRef.current;
+        const research = state.research || {};
+        const gen = state.generators[id];
+        if (!gen || gen.amount.lte(0)) return new Decimal(0);
+        const rank = getNextMilestone(gen.amount).level;
+        if (rank <= 0) return new Decimal(0);
+        const tier = id;
+        let cost = new Decimal((rank + tier) * 0.01);
+        const speedLevel = research[`gen${id + 1}_speed`] || 0;
+        const effLevel = research[`gen${id + 1}_eff`] || 0;
+        const resonanceLevel = research[`gen${id + 1}_resonance`] || 0;
+        const totalTaxedUpgrades = effLevel + resonanceLevel;
+        cost = cost.add((tier + 1) * 0.01 * totalTaxedUpgrades);
+        cost = cost.sub(speedLevel * 0.01).max(0);
+        const nowTs = Date.now();
+        if (state.overclockActive?.[id] && state.overclockActive[id] > nowTs) cost = cost.times(5);
+        return cost;
+    }, [getNextMilestone]);
+
+    const getMaintenanceRate = useCallback((stateOverride) => {
+        const state = stateOverride || stateRef.current;
+        let totalCost = new Decimal(0);
+        state.generators.forEach((gen, i) => {
+            totalCost = totalCost.add(getGeneratorMaintenance(i, state));
+        });
+        const stasisLevel = state.talents?.['temporal_stasis'] || 0;
+        const stasisMult = Math.max(0.1, 1 - (stasisLevel * 0.03));
+        return totalCost.times(stasisMult);
+    }, [getGeneratorMaintenance]);
+
+    // --- GAMEPLAY STATS ---
     const calculateTotalEarnedInsights = useCallback((generators, research) => {
         let total = new Decimal(0);
         generators.forEach((gen, index) => {
             const { level } = getNextMilestone(gen.amount);
             if (level > 0) {
-                // Tier Reward = (index + 1) * Level
                 const resonanceLevel = research?.[`gen${index + 1}_resonance`] || 0;
-                const multiplier = Math.pow(2, resonanceLevel);
-
-                const tierReward = new Decimal(index + 1).times(level).times(multiplier);
-                total = total.add(tierReward);
+                total = total.add(new Decimal(index + 1).times(level).times(Math.pow(2, resonanceLevel)));
             }
         });
         return total;
     }, [getNextMilestone]);
 
-    // Helper: Calculate Total Insights Spent on Research
     const calculateTotalSpentInsights = useCallback((research) => {
         let total = new Decimal(0);
         Object.entries(research).forEach(([id, level]) => {
             const item = RESEARCH_DATA.find(r => r.id === id);
-            if (item) {
-                // Sum cost for all levels bought
-                for (let i = 0; i < level; i++) {
-                    total = total.add(item.getCost(i));
-                }
-            }
+            if (item) for (let i = 0; i < level; i++) total = total.add(item.getCost(i));
         });
         return total;
     }, []);
 
-
-
-    const tick = useCallback((dt, shouldRender = true) => {
-        const currentState = stateRef.current;
-        let generatedIterons = new Decimal(0);
-
-        const newGenerators = currentState.generators.map(g => ({ ...g }));
-
-        // 1. Generator 0 produces Iterons
-        const gen0 = newGenerators[0];
-        if (gen0.amount.gt(0)) {
-            const baseProd = getBaseProduction(0);
-            const effMult = getEfficiencyMultiplier(0);
-            // Amount * Multiplier * Efficiency * BaseProdPerSec * DT
-            const payout = gen0.amount.times(gen0.multiplier).times(effMult).times(baseProd).times(dt);
-            generatedIterons = payout;
-        }
-
-        // 2. Higher tiers produce lower tiers
-        for (let i = 1; i < 50; i++) {
-            const gen = newGenerators[i];
-            if (gen.amount.gt(0)) {
-                const baseProd = getBaseProduction(i);
-                const effMult = getEfficiencyMultiplier(i);
-                const production = gen.amount.times(gen.multiplier).times(effMult).times(baseProd).times(dt);
-
-                // Add to target (i-1)
-                newGenerators[i - 1].amount = newGenerators[i - 1].amount.add(production);
-            }
-        }
-
-        // Update the ref
-        stateRef.current = {
-            ...currentState,
-            generators: newGenerators,
-            iterons: currentState.iterons.add(generatedIterons),
-            lastTick: Date.now(),
-            activeTime: (currentState.activeTime || 0) + dt,
-            playtime: (currentState.playtime || 0) + dt,
-            missionStats: {
-                ...currentState.missionStats,
-                totalMilestones: currentState.generators.reduce((sum, g) => sum + getNextMilestone(g.amount).level, 0),
-                consecutiveStableTime: currentState.treasuryIterons.gt(0)
-                    ? (currentState.missionStats.consecutiveStableTime || 0) + dt
-                    : 0
-            }
-        };
-
-        // --- OVERCLOCK EXPIRATION ---
-        const nowTs = Date.now();
-        Object.keys(stateRef.current.overclockActive).forEach(id => {
-            if (stateRef.current.overclockActive[id] < nowTs) {
-                delete stateRef.current.overclockActive[id];
-            }
-        });
-
-        // --- MISSION CHECK ---
-        MISSIONS.forEach(mission => {
-            if (currentState.completedMissions.includes(mission.id)) return;
-
-            let progress = new Decimal(0);
-            if (mission.type === MISSION_TYPES.REACH_MILESTONES) progress = new Decimal(stateRef.current.missionStats.totalMilestones);
-            if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = stateRef.current.iterons;
-            if (mission.type === MISSION_TYPES.STABILITY_TIME) progress = new Decimal(stateRef.current.missionStats.consecutiveStableTime);
-
-            if (progress.gte(mission.target)) {
-                // Auto-trigger notification or just mark as ready to claim?
-                // For now, let's keep it simple: player must claim in UI.
-            }
-        });
-
-        // --- TALENT: Focus Gain (Disabled until Talent mechanics are finalized) ---
-        /*
-        const focusLevel = currentState.talents?.['milestone_efficiency'] || 0;
-        const focusInterval = 60 - (focusLevel * 5);
-        if (stateRef.current.activeTime >= focusInterval) {
-            const feedbackLevel = currentState.talents?.['eternal_feedback'] || 0;
-            const feedbackMult = 1 + (feedbackLevel * 0.05);
-            stateRef.current.activeEnergy = stateRef.current.activeEnergy.add(feedbackMult);
-            stateRef.current.activeTime -= focusInterval;
-        }
-        */
-
-        if (shouldRender) {
-            setGameState(prevState => {
-                let nextState = { ...prevState, ...stateRef.current };
-                nextState.activeEnergy = stateRef.current.activeEnergy;
-                nextState.activeTime = stateRef.current.activeTime;
-
-                const earned = calculateTotalEarnedInsights(nextState.generators, nextState.research);
-                const spent = calculateTotalSpentInsights(nextState.research);
-                const expectedBalance = earned.sub(spent);
-
-                if (nextState.insight.lt(expectedBalance)) {
-                    nextState.insight = expectedBalance;
-                }
-
-                return nextState;
-            });
-        }
-    }, [calculateTotalEarnedInsights, calculateTotalSpentInsights, getBaseProduction, getEfficiencyMultiplier]);
-
-    const manualClick = useCallback(() => {
-        setGameState((prevState) => {
-            const newState = { ...prevState };
-            newState.iterons = newState.iterons.add(1);
-
-            // --- TALENT: Kinetic Link ---
-            const kineticLevel = newState.talents?.['kinetic_clique'] || 0;
-            if (kineticLevel > 0) {
-                const bonusSeconds = kineticLevel * 0.1;
-                const prod = calculateProduction(newState);
-                newState.iterons = newState.iterons.add(prod.times(bonusSeconds));
-            }
-
-            return newState;
-        });
-    }, []);
-
-    const buyGenerator = useCallback((id) => {
-        setGameState((prevState) => {
-            const newState = { ...prevState };
-
-            // Create a deep copy of the generators array to avoid mutation
-            const newGenerators = newState.generators.map(g => ({ ...g }));
-            const gen = newGenerators[id];
-
-            // Unified cost calculation to prevent UI/Logic mismatch
-            const cost = getGeneratorCost(id);
-
-            if (newState.iterons.gte(cost)) {
-                // Check milestone level BEFORE purchase
-                const prevMilestone = getNextMilestone(gen.amount);
-
-                newState.iterons = newState.iterons.sub(cost);
-                gen.amount = gen.amount.add(1);
-                gen.bought = gen.bought.add(1);
-
-                // Check milestone level AFTER purchase
-                const newMilestone = getNextMilestone(gen.amount);
-
-                // Award Insights if level increased
-                if (newMilestone.level > prevMilestone.level) {
-                    const tierReward = new Decimal(id + 1);
-                    const levelsGained = new Decimal(newMilestone.level - prevMilestone.level);
-
-                    // Apply Resonance multiplier
-                    const resonanceLevel = newState.research[`gen${id + 1}_resonance`] || 0;
-                    const resonanceMultiplier = Math.pow(2, resonanceLevel);
-
-                    let totalReward = tierReward.times(levelsGained).times(resonanceMultiplier);
-
-                    // Insight Yield Talent: 5% chance per level
-                    const yieldLevel = newState.talents?.['insight_yield'] || 0;
-                    if (yieldLevel > 0 && Math.random() < yieldLevel * 0.05) {
-                        totalReward = totalReward.add(1);
-                    }
-
-                    newState.insight = newState.insight.add(totalReward);
-                }
-
-                newGenerators[id] = gen;
-                newState.generators = newGenerators;
-            }
-
-            return newState;
-        });
-    }, [getNextMilestone]);
-
     const getGeneratorCost = useCallback((id) => {
         const gen = stateRef.current.generators[id];
-        // Exponential formula: Base * (1.12 ^ bought)
         return gen.costBase.times(new Decimal(1.12).pow(gen.bought));
-    }, []);
-
-    const buyResearch = useCallback((id) => {
-        setGameState((prevState) => {
-            const newState = { ...prevState };
-
-            const researchItem = RESEARCH_DATA.find(r => r.id === id);
-            if (!researchItem) return prevState;
-
-            const currentLevel = newState.research[id] || 0;
-            if (currentLevel >= researchItem.maxLevel) return prevState; // Maxed out
-
-            const cost = researchItem.getCost(currentLevel);
-
-            if (newState.insight.gte(cost)) {
-                newState.insight = newState.insight.sub(cost);
-                newState.research = {
-                    ...newState.research,
-                    [id]: currentLevel + 1
-                };
-            }
-
-            return newState;
-        });
     }, []);
 
     const getGeneratorProduction = useCallback((id) => {
         const gen = stateRef.current.generators[id];
         if (gen.amount.eq(0)) return new Decimal(0);
-
-        const effMult = getEfficiencyMultiplier(id);
-        const baseProd = getBaseProduction(id);
-
-        return gen.amount.times(gen.multiplier).times(effMult).times(baseProd);
-    }, []);
+        return gen.amount.times(gen.multiplier).times(getEfficiencyMultiplier(id)).times(getBaseProduction(id));
+    }, [getEfficiencyMultiplier, getBaseProduction]);
 
     const calculateProduction = useCallback((stateOverride) => {
         const state = stateOverride || stateRef.current || INITIAL_STATE;
         const gen0 = state.generators[0];
-
-        if (!gen0 || !gen0.amount || gen0.amount.lte(0)) return new Decimal(0);
-
-        const effMult = getEfficiencyMultiplier(0);
-        const baseProd = getBaseProduction(0);
-        return gen0.amount.times(gen0.multiplier).times(effMult).times(baseProd);
+        if (!gen0 || gen0.amount.lte(0)) return new Decimal(0);
+        return gen0.amount.times(gen0.multiplier).times(getEfficiencyMultiplier(0)).times(getBaseProduction(0));
     }, [getEfficiencyMultiplier, getBaseProduction]);
 
-    // Load on mount
-    useEffect(() => {
-        loadGame();
-    }, []); // Empty dependency array to run ONCE on mount
+    // --- CORE LOOP ---
+    const processOfflineProduction = useCallback((loadedState) => {
+        const now = Date.now();
+        const gapSec = (now - loadedState.lastTick) / 1000;
+        if (gapSec < 60) return loadedState;
+        const rate = getMaintenanceRate(loadedState);
+        let effectiveTime = gapSec;
+        let treasuryUsed = new Decimal(0);
+        if (rate.gt(0)) {
+            const expansionLevel = loadedState.talents?.['reservoir_expansion'] || 0;
+            const maxAffordable = loadedState.treasuryIterons.div(rate).times(1 + (expansionLevel * 0.2));
+            effectiveTime = Math.min(gapSec, maxAffordable.toNumber());
+            treasuryUsed = rate.times(effectiveTime / (1 + (expansionLevel * 0.2)));
+        } else {
+            effectiveTime = 0;
+        }
+        const nextState = { ...loadedState };
+        nextState.treasuryIterons = nextState.treasuryIterons.sub(treasuryUsed);
+        nextState.playtime = (nextState.playtime || 0) + effectiveTime;
+        const gens = nextState.generators.map(g => ({ ...g }));
+        const offlineLevel = nextState.talents?.['offline_refinement'] || 0;
+        const offlineMult = 1 + (offlineLevel * 0.1);
 
-    const toggleFPS = useCallback(() => {
-        setGameState(prev => ({
-            ...prev,
-            showFPS: !prev.showFPS
-        }));
+        if (gens[0].amount.gt(0)) {
+            const payout = gens[0].amount.times(gens[0].multiplier).times(getEfficiencyMultiplier(0)).times(getBaseProduction(0)).times(effectiveTime).times(offlineMult);
+            nextState.iterons = nextState.iterons.add(payout);
+        }
+        for (let i = 1; i < 50; i++) {
+            if (gens[i].amount.gt(0)) {
+                const prod = gens[i].amount.times(gens[i].multiplier).times(getEfficiencyMultiplier(i)).times(getBaseProduction(i)).times(effectiveTime).times(offlineMult);
+                gens[i - 1].amount = gens[i - 1].amount.add(prod);
+            }
+        }
+        nextState.generators = gens;
+        nextState.offlineResults = { totalGap: gapSec, effectiveTime, treasuryUsed, depleted: effectiveTime < gapSec };
+        return nextState;
+    }, [getMaintenanceRate, getEfficiencyMultiplier, getBaseProduction]);
+
+    const tick = useCallback((dt, shouldRender = true) => {
+        const currentState = stateRef.current;
+        const newGenerators = currentState.generators.map(g => ({ ...g }));
+        const baseProb0 = getBaseProduction(0);
+        const effMult0 = getEfficiencyMultiplier(0);
+        const gen0Payout = newGenerators[0].amount.times(newGenerators[0].multiplier).times(effMult0).times(baseProb0).times(dt);
+
+        for (let i = 1; i < 50; i++) {
+            if (newGenerators[i].amount.gt(0)) {
+                const prod = newGenerators[i].amount.times(newGenerators[i].multiplier).times(getEfficiencyMultiplier(i)).times(getBaseProduction(i)).times(dt);
+                newGenerators[i - 1].amount = newGenerators[i - 1].amount.add(prod);
+            }
+        }
+
+        stateRef.current = {
+            ...currentState,
+            generators: newGenerators,
+            iterons: currentState.iterons.add(gen0Payout),
+            lastTick: Date.now(),
+            playtime: (currentState.playtime || 0) + dt,
+            missionStats: {
+                totalMilestones: newGenerators.reduce((sum, g) => sum + getNextMilestone(g.amount).level, 0),
+                totalDeposited: currentState.missionStats.totalDeposited || new Decimal(0)
+            }
+        };
+
+        const nowTs = Date.now();
+        Object.keys(stateRef.current.overclockActive).forEach(id => {
+            if (stateRef.current.overclockActive[id] < nowTs) delete stateRef.current.overclockActive[id];
+        });
+
+        if (shouldRender) {
+            setGameState(prev => {
+                const next = { ...prev, ...stateRef.current };
+                const earned = calculateTotalEarnedInsights(next.generators, next.research);
+                const spent = calculateTotalSpentInsights(next.research);
+                const expected = earned.sub(spent);
+                if (next.insight.lt(expected)) next.insight = expected;
+                return next;
+            });
+        }
+    }, [calculateTotalEarnedInsights, calculateTotalSpentInsights, getBaseProduction, getEfficiencyMultiplier, getNextMilestone]);
+
+    // --- ACTIONS ---
+    const saveGame = useCallback(() => {
+        localStorage.setItem('chronos-iteratio-save', serializeState(stateRef.current));
     }, []);
 
+    const loadGame = useCallback(() => {
+        const saved = localStorage.getItem('chronos-iteratio-save');
+        if (saved) {
+            const loaded = processOfflineProduction(deserializeState(saved));
+            setGameState(loaded);
+            stateRef.current = loaded;
+        }
+    }, [processOfflineProduction]);
 
-    const depositInTreasury = useCallback((amount) => {
+    const hardReset = useCallback(() => {
+        localStorage.removeItem('chronos-iteratio-save');
+        setGameState(INITIAL_STATE);
+        window.location.reload();
+    }, []);
+
+    const manualClick = useCallback(() => {
         setGameState(prev => {
-            let toDeposit = amount;
-            if (amount === 'all') toDeposit = prev.iterons;
-            else toDeposit = new Decimal(amount);
+            const next = { ...prev };
+            next.iterons = next.iterons.add(1);
+            const kineticLevel = next.talents?.['kinetic_clique'] || 0;
+            if (kineticLevel > 0) next.iterons = next.iterons.add(calculateProduction(next).times(kineticLevel * 0.1));
+            return next;
+        });
+    }, [calculateProduction]);
 
-            // Cap by available iterons
-            toDeposit = Decimal.min(toDeposit, prev.iterons);
+    const buyGenerator = useCallback((id) => {
+        setGameState(prev => {
+            const cost = getGeneratorCost(id);
+            if (prev.iterons.lt(cost)) return prev;
+            const next = { ...prev, generators: prev.generators.map(g => ({ ...g })) };
+            const gen = next.generators[id];
+            const prevMilestone = getNextMilestone(gen.amount);
+            next.iterons = next.iterons.sub(cost);
+            gen.amount = gen.amount.add(1);
+            gen.bought = gen.bought.add(1);
+            const newMilestone = getNextMilestone(gen.amount);
+            if (newMilestone.level > prevMilestone.level) {
+                const resonanceMultiplier = Math.pow(2, next.research[`gen${id + 1}_resonance`] || 0);
+                let reward = new Decimal(id + 1).times(newMilestone.level - prevMilestone.level).times(resonanceMultiplier);
+                const yieldLevel = next.talents?.['insight_yield'] || 0;
+                if (yieldLevel > 0 && Math.random() < yieldLevel * 0.05) reward = reward.add(1);
+                next.insight = next.insight.add(reward);
+            }
+            return next;
+        });
+    }, [getGeneratorCost, getNextMilestone]);
 
-            if (toDeposit.lte(0)) return prev;
-
-            return {
-                ...prev,
-                iterons: prev.iterons.sub(toDeposit),
-                treasuryIterons: prev.treasuryIterons.add(toDeposit)
-            };
+    const buyResearch = useCallback((id) => {
+        setGameState(prev => {
+            const item = RESEARCH_DATA.find(r => r.id === id);
+            const currentLevel = prev.research[id] || 0;
+            if (!item || currentLevel >= item.maxLevel) return prev;
+            const cost = item.getCost(currentLevel);
+            if (prev.insight.lt(cost)) return prev;
+            return { ...prev, insight: prev.insight.sub(cost), research: { ...prev.research, [id]: currentLevel + 1 } };
         });
     }, []);
-
 
     const buyTalent = useCallback((id) => {
         const talent = TALENT_DATA.find(t => t.id === id);
         if (!talent) return;
-
         setGameState(prev => {
             const currentLevel = prev.talents[id] || 0;
-            if (currentLevel >= talent.maxLevel) return prev; // Maxed out
-
-            // Recalculate cost inside the setter to ensure latest state is used (though closure captures logic)
-            // Ideally we use stateRef if we needed perfect sync, but prev is fine for atomic updates.
-            // CAUTION: talent.getCost(level) is deterministic.
-            const cost = talent.getCost(currentLevel);
-            const currency = talent.path; // 'activeEnergy' or 'stabilityEssence'
-
-            // Safe check: currency balance might be missing or not a Decimal if state is corrupted,
-            // but we trust deserializeState.
-            // --- PREREQUISITE CHECK ---
+            if (currentLevel >= talent.maxLevel) return prev;
+            if (prev.talentPoints < 1) return prev;
             const edges = TALENT_TREE_EDGES.filter(e => e.to === id);
-            const isRoot = edges.some(e => e.from === null);
-
-            if (!isRoot) {
-                const hasParentUnlocked = edges.some(e => (prev.talents[e.from] || 0) > 0);
-                if (!hasParentUnlocked) {
-                    console.log(`Talent ${id} is locked. Prerequisites not met.`);
-                    return prev;
-                }
-            }
-
+            if (!edges.some(e => e.from === null) && !edges.some(e => (prev.talents[e.from] || 0) > 0)) return prev;
             return {
                 ...prev,
-                [currency]: prev[currency].sub(cost),
-                talents: {
-                    ...prev.talents,
-                    [id]: currentLevel + 1
-                }
+                talentPoints: prev.talentPoints - 1,
+                talents: { ...prev.talents, [id]: currentLevel + 1 }
             };
         });
     }, []);
 
     const respecTalents = useCallback(() => {
         setGameState(prev => {
-            let refundFocus = new Decimal(0);
-            let refundFlux = new Decimal(0);
-            const newTalents = {};
-
-            // Calculate refunds
+            let totalSpent = 0;
             Object.entries(prev.talents).forEach(([id, level]) => {
-                const talent = TALENT_DATA.find(t => t.id === id);
-                if (talent && level > 0) {
-                    let totalCost = new Decimal(0);
-                    // Sum cost for levels 0 to level-1
-                    for (let i = 0; i < level; i++) {
-                        totalCost = totalCost.add(talent.getCost(i));
-                    }
-
-                    if (talent.path === 'focus' || talent.path === 'activeEnergy') {
-                        refundFocus = refundFocus.add(totalCost);
-                    } else if (talent.path === 'flux' || talent.path === 'stabilityEssence') {
-                        refundFlux = refundFlux.add(totalCost);
-                    }
-                }
+                totalSpent += level;
             });
-
-            console.log(`Respec: Refunding ${formatNumber(refundFocus)} Active Energy and ${formatNumber(refundFlux)} Stability Essence.`);
-
             return {
                 ...prev,
-                activeEnergy: prev.activeEnergy.add(refundFocus),
-                stabilityEssence: prev.stabilityEssence.add(refundFlux),
-                talents: {} // Wipe all levels
+                talentPoints: prev.talentPoints + totalSpent,
+                talents: {}
+            };
+        });
+    }, []);
+
+    const claimMissionReward = useCallback((missionId) => {
+        setGameState(prev => {
+            if (prev.completedMissions.includes(missionId)) return prev;
+            const mission = MISSIONS.find(m => m.id === missionId);
+            if (!mission) return prev;
+            const next = { ...prev, completedMissions: [...prev.completedMissions, missionId], experimentXP: prev.experimentXP + 1 };
+            if (mission.reward.type === 'insight') next.insight = next.insight.add(mission.reward.amount);
+            if (mission.reward.type === 'reservoir') next.iterons = next.iterons.add(mission.reward.amount);
+            return next;
+        });
+    }, []);
+
+    const rankUp = useCallback(() => {
+        setGameState(prev => {
+            const xpReq = getXPRequired(prev.experimentRank);
+            if (prev.experimentXP < xpReq) return prev;
+            return {
+                ...prev,
+                experimentRank: prev.experimentRank + 1,
+                experimentXP: Math.max(0, prev.experimentXP - xpReq),
+                talentPoints: prev.talentPoints + 1
+            };
+        });
+    }, [getXPRequired]);
+
+    const depositInTreasury = useCallback((amount) => {
+        setGameState(prev => {
+            const toDeposit = amount === 'all' ? prev.iterons : Decimal.min(new Decimal(amount), prev.iterons);
+            if (toDeposit.lte(0)) return prev;
+            return {
+                ...prev,
+                iterons: prev.iterons.sub(toDeposit),
+                treasuryIterons: prev.treasuryIterons.add(toDeposit),
+                missionStats: {
+                    ...prev.missionStats,
+                    totalDeposited: (prev.missionStats.totalDeposited || new Decimal(0)).add(toDeposit)
+                }
             };
         });
     }, []);
@@ -711,47 +433,10 @@ export const GameProvider = ({ children }) => {
         });
     }, []);
 
-    const claimMissionReward = useCallback((missionId) => {
-        const mission = MISSIONS.find(m => m.id === missionId);
-        if (!mission) return;
-
-        setGameState(prev => {
-            if (prev.completedMissions.includes(missionId)) return prev;
-
-            const next = { ...prev };
-            next.completedMissions = [...prev.completedMissions, missionId];
-
-            const reward = mission.reward;
-            if (reward.type === 'insight') next.insight = next.insight.add(reward.amount);
-            if (reward.type === 'reservoir') next.iterons = next.iterons.add(reward.amount);
-
-            // Add XP
-            next.experimentXP += 1;
-
-            // Handle Level Up
-            let xpReq = getXPRequired(next.experimentRank);
-            while (next.experimentXP >= xpReq) {
-                next.experimentXP -= xpReq;
-                next.experimentRank += 1;
-                xpReq = getXPRequired(next.experimentRank);
-            }
-
-            return next;
-        });
-    }, [getXPRequired]);
-
-    const dismissTimeShift = useCallback(() => {
-        setGameState(prev => ({ ...prev, isTimeShiftDismissed: true }));
-    }, []);
-
-    const activateOverclock = useCallback((id, durationMinutes) => {
-        const expiry = Date.now() + (durationMinutes * 60 * 1000);
+    const activateOverclock = useCallback((id, durationMin) => {
         setGameState(prev => ({
             ...prev,
-            overclockActive: {
-                ...prev.overclockActive,
-                [id]: expiry
-            }
+            overclockActive: { ...prev.overclockActive, [id]: Date.now() + (durationMin * 60 * 1000) }
         }));
     }, []);
 
@@ -763,19 +448,27 @@ export const GameProvider = ({ children }) => {
         });
     }, []);
 
-    const restoreTimeShift = useCallback(() => {
-        setGameState(prev => ({ ...prev, isTimeShiftDismissed: false }));
-    }, []);
+    const toggleFPS = useCallback(() => setGameState(prev => ({ ...prev, showFPS: !prev.showFPS })), []);
+    const dismissTimeShift = useCallback(() => setGameState(prev => ({ ...prev, isTimeShiftDismissed: true })), []);
+    const restoreTimeShift = useCallback(() => setGameState(prev => ({ ...prev, isTimeShiftDismissed: false })), []);
+
+    // --- EFFECTS ---
+    useEffect(() => { loadGame(); }, [loadGame]);
+    useEffect(() => {
+        const interval = setInterval(() => saveGame(), 5000);
+        return () => clearInterval(interval);
+    }, [saveGame]);
 
     return (
         <GameContext.Provider value={{
             gameState, tick, manualClick, buyGenerator, getGeneratorCost,
-            saveGame, hardReset, calculateMultiplier, getNextMilestone,
-            getGeneratorProduction, calculateProduction, toggleFPS,
-            getBaseProduction, buyResearch, buyTalent, respecTalents,
-            dismissOfflineResults, depositInTreasury, getMaintenanceRate,
-            dismissTimeShift, restoreTimeShift, toggleOverclock: activateOverclock,
-            activateOverclock, deactivateOverclock, claimMissionReward, getXPRequired
+            saveGame, loadGame, hardReset, getNextMilestone, getGeneratorProduction,
+            calculateProduction, calculateMultiplier, toggleFPS, getBaseProduction, buyResearch,
+            buyTalent, respecTalents, dismissOfflineResults, depositInTreasury,
+            getMaintenanceRate, getGeneratorMaintenance, dismissTimeShift,
+            restoreTimeShift, toggleOverclock: activateOverclock,
+            activateOverclock, deactivateOverclock, claimMissionReward,
+            getXPRequired, rankUp
         }}>
             {children}
         </GameContext.Provider>
