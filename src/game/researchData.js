@@ -81,5 +81,5 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
         }
     };
 
-    return [speedItem, effItem, resonanceItem];
+    return [effItem, resonanceItem];
 }).flat();

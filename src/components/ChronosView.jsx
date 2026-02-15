@@ -31,20 +31,17 @@ const ChronosView = () => {
     }).filter(Boolean);
 
     return (
-        <div className="max-w-4xl mx-auto p-6 space-y-8 pb-32 fade-in-animation h-full overflow-y-auto">
+        <div className="w-full space-y-4 pb-32 h-full overflow-y-auto custom-scrollbar">
             {/* Main Reservoir Dashboard */}
-            <div className="space-y-6">
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h2 className="text-4xl font-black tracking-tighter">The Eternity Reservoir</h2>
-                    </div>
-                    {isDepleted && (
+            <div className="space-y-4">
+                {isDepleted && (
+                    <header className="flex justify-end">
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive bg-destructive/10 px-3 py-1.5 rounded-lg border border-destructive/20 animate-pulse">
                             <AlertTriangle className="w-4 h-4" />
                             RESERVOIR EMPTY - ETERNITY COLLAPSING
                         </div>
-                    )}
-                </header>
+                    </header>
+                )}
 
                 <Card className="border-2 border-primary/10 shadow-lg overflow-hidden bg-card/50 backdrop-blur-sm">
                     <div className="p-4 md:p-6 space-y-6">

@@ -2,8 +2,6 @@
 
 **Breaking Infinity** is a high-performance, visually stunning incremental game built with React and Vite. Experience the challenge of managing an unstable universe where every generator improvement risks the collapse of reality itself.
 
-![Game Preview](https://github.com/JoniGuerini/breaking-eternity/blob/main/public/preview.png?raw=true)
-
 ## 🌟 Core Features
 
 ### ⚙️ Multidimensional Generators

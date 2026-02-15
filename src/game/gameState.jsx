@@ -145,14 +145,16 @@ export const GameProvider = ({ children }) => {
         if (!gen || gen.amount.lte(0)) return new Decimal(0);
         const rank = getNextMilestone(gen.amount).level;
         if (rank <= 0) return new Decimal(0);
-        const tier = id;
-        let cost = new Decimal((rank + tier) * 0.01);
-        const speedLevel = research[`gen${id + 1}_speed`] || 0;
-        const effLevel = research[`gen${id + 1}_eff`] || 0;
-        const resonanceLevel = research[`gen${id + 1}_resonance`] || 0;
-        const totalTaxedUpgrades = effLevel + resonanceLevel;
-        cost = cost.add((tier + 1) * 0.01 * totalTaxedUpgrades);
-        cost = cost.sub(speedLevel * 0.01).max(0);
+
+        const genNum = id + 1;
+        const effLevel = research[`gen${genNum}_eff`] || 0;
+        const resonanceLevel = research[`gen${genNum}_resonance`] || 0;
+
+        // Base maintenance: Each rank costs (genNum * 0.01)
+        // Each research level also adds (genNum * 0.01)
+        const totalUnits = rank + effLevel + resonanceLevel;
+        let cost = new Decimal(totalUnits).times(genNum * 0.01);
+
         const nowTs = Date.now();
         if (state.overclockActive?.[id] && state.overclockActive[id] > nowTs) cost = cost.times(5);
         return cost;
