@@ -128,7 +128,6 @@ const Layout = ({ children }) => {
                     <div className="hidden lg:block">
                         <FPSCounter />
                     </div>
-                    <SaveControls />
                 </div>
             </header>
 
