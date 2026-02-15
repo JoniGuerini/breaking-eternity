@@ -35,10 +35,10 @@ const HeaderResourceDisplay = () => {
 
     return (
         <div className="flex-1 flex items-center justify-center gap-2 md:gap-6 px-4 min-w-0">
-            {/* Main Integer Display (Iterons) */}
+            {/* Main Integer Display */}
             <div className="flex items-center gap-1.5 md:gap-3 min-w-0 shrink-1">
                 <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-foreground drop-shadow-md font-mono truncate">
-                    {formatNumber(gameState.iterons, { growthRate: productionPerSecond })}
+                    {formatNumber(gameState.eternityFragments, { growthRate: productionPerSecond })}
                 </h1>
 
                 {/* Velocity / Rate Display */}
@@ -47,7 +47,7 @@ const HeaderResourceDisplay = () => {
                         +{formatNumber(productionPerSecond)}/s
                     </div>
                     <div className="text-[8px] md:text-[10px] text-muted-foreground font-medium uppercase tracking-widest whitespace-nowrap">
-                        Fragments
+                        Eternity Fragments
                     </div>
                 </div>
             </div>
@@ -81,16 +81,16 @@ const HeaderResourceDisplay = () => {
             )}
 
             {/* Stability Reservoir Remaining Time */}
-            {(gameState.treasuryIterons.gt(0) || gameState.generators.some(g => g.amount.gt(0))) && (
+            {(gameState.reservoirEternityFragments.gt(0) || gameState.generators.some(g => g.amount.gt(0))) && (
                 <div className="flex items-center gap-1 md:gap-2 border-l border-border/30 pl-2 md:pl-4 shrink-0">
                     <div className="flex flex-col items-end leading-none">
-                        <span className={`text-sm md:text-xl font-bold font-mono ${gameState.treasuryIterons.lte(0) ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`}>
+                        <span className={`text-sm md:text-xl font-bold font-mono ${gameState.reservoirEternityFragments.lte(0) ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`}>
                             {(() => {
                                 const maintenanceRate = game.getMaintenanceRate();
                                 const expansionLevel = gameState.talents?.['reservoir_expansion'] || 0;
                                 const expansionMult = 1 + (expansionLevel * 0.2);
                                 const timeRemaining = maintenanceRate.gt(0)
-                                    ? gameState.treasuryIterons.div(maintenanceRate).toNumber() * expansionMult
+                                    ? gameState.reservoirEternityFragments.div(maintenanceRate).toNumber() * expansionMult
                                     : 0;
 
                                 return maintenanceRate.gt(0) ? formatTime(Math.floor(timeRemaining)) : "∞";
@@ -113,10 +113,10 @@ const Layout = ({ children }) => {
             <header className="flex-none w-full px-4 md:px-8 py-2 md:py-3 flex justify-between items-center z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
                 <div className="shrink-0">
                     <h1 className="text-base md:text-xl font-black tracking-tighter text-primary select-none hidden sm:block">
-                        CHRONOS ITERATIO
+                        Breaking Infinity
                     </h1>
                     <h1 className="text-lg font-black tracking-tighter text-primary select-none block sm:hidden">
-                        CI
+                        BI
                     </h1>
                 </div>
 

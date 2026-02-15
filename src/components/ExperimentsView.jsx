@@ -13,7 +13,7 @@ import Decimal from 'break_eternity.js';
 const ExperimentsView = () => {
     const { gameState, claimMissionReward, getXPRequired, rankUp } = useGame();
     if (!gameState) return null;
-    const { completedMissions, missionStats, iterons, experimentRank, experimentXP } = gameState;
+    const { completedMissions, missionStats, eternityFragments, experimentRank, experimentXP } = gameState;
 
     const xpReq = getXPRequired(experimentRank);
     const xpPercent = (experimentXP / xpReq) * 100;
@@ -31,7 +31,7 @@ const ExperimentsView = () => {
                 const isCompleted = completedMissions.includes(mission.id);
                 let progress = new Decimal(0);
                 if (mission.type === MISSION_TYPES.REACH_MILESTONES) progress = new Decimal(missionStats.totalMilestones);
-                if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = iterons;
+                if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = eternityFragments;
                 if (mission.type === MISSION_TYPES.DEPOSIT_FRAGMENTS) progress = missionStats.totalDeposited || new Decimal(0);
                 if (mission.type === MISSION_TYPES.OWN_GENERATOR) progress = gameState.generators[mission.genId].amount;
                 if (mission.type === MISSION_TYPES.BUY_RESEARCH) {
@@ -49,7 +49,7 @@ const ExperimentsView = () => {
                 if (!a.isCompleted && b.isCompleted) return -1;
                 return b.minRank - a.minRank;
             });
-    }, [completedMissions, missionStats, iterons, experimentRank, gameState.generators, gameState.research]);
+    }, [completedMissions, missionStats, eternityFragments, experimentRank, gameState.generators, gameState.research]);
 
     return (
         <div className="w-full h-full flex flex-col gap-4">
@@ -113,7 +113,7 @@ const ExperimentsView = () => {
                             </div>
                             <Badge
                                 variant="outline"
-                                className={`text-[10px] uppercase font-bold tracking-wider px-2 h-5 shrink-0 ${mission.isCompleted
+                                className={`text-[10px] font-bold tracking-wider px-2 h-5 shrink-0 ${mission.isCompleted
                                     ? 'bg-muted/10 text-muted-foreground/40 border-border/50'
                                     : mission.canClaim
                                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'

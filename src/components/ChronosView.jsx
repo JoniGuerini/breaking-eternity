@@ -8,19 +8,19 @@ import { formatNumber, formatTime } from '../utils/formatUtils';
 import Decimal from 'break_eternity.js';
 
 const ChronosView = () => {
-    const { gameState, depositInTreasury, getMaintenanceRate, getGeneratorMaintenance } = useGame();
-    const { iterons, treasuryIterons, generators } = gameState;
+    const { gameState, depositInReservoir, getMaintenanceRate, getGeneratorMaintenance } = useGame();
+    const { eternityFragments, reservoirEternityFragments, generators } = gameState;
 
     const maintenanceRate = getMaintenanceRate();
     const expansionLevel = gameState.talents?.['reservoir_expansion'] || 0;
     const expansionMult = 1 + (expansionLevel * 0.2);
 
     const timeRemaining = maintenanceRate.gt(0)
-        ? treasuryIterons.div(maintenanceRate).toNumber() * expansionMult
+        ? reservoirEternityFragments.div(maintenanceRate).toNumber() * expansionMult
         : 0;
 
 
-    const isDepleted = treasuryIterons.lte(0) && maintenanceRate.gt(0);
+    const isDepleted = reservoirEternityFragments.lte(0) && maintenanceRate.gt(0);
 
     // Calculate per-generator maintenance
     const genMaintenance = generators.map((gen, i) => {
@@ -32,14 +32,10 @@ const ChronosView = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-8 pb-32 fade-in-animation h-full overflow-y-auto">
-            {/* Main Treasury Dashboard */}
+            {/* Main Reservoir Dashboard */}
             <div className="space-y-6">
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <Landmark className="w-5 h-5 text-primary" />
-                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Eternity Stabilization System</span>
-                        </div>
                         <h2 className="text-4xl font-black tracking-tighter">The Eternity Reservoir</h2>
                     </div>
                     {isDepleted && (
@@ -69,7 +65,7 @@ const ChronosView = () => {
 
                                 <div className="max-w-md mx-auto py-3 px-6 rounded-2xl bg-muted/30 border border-border/50 text-sm">
                                     <p className="text-muted-foreground leading-relaxed">
-                                        You have <span className="text-foreground font-black">{formatNumber(treasuryIterons)}</span> Fragments infused,
+                                        You have <span className="text-foreground font-black">{formatNumber(reservoirEternityFragments)}</span> Eternity Fragments infused,
                                         maintaining reality synchronization for the next <span className="text-primary font-black">{maintenanceRate.gt(0) ? formatTime(Math.floor(timeRemaining)) : "eternity"}</span>.
                                     </p>
                                 </div>
@@ -84,32 +80,32 @@ const ChronosView = () => {
                                     <Button
                                         variant="outline"
                                         className="bg-background/50 border h-9 text-xs font-bold hover:bg-primary hover:text-primary-foreground"
-                                        onClick={() => depositInTreasury(maintenanceRate.times(3600))}
-                                        disabled={iterons.lt(maintenanceRate.times(3600)) || maintenanceRate.lte(0)}
+                                        onClick={() => depositInReservoir(maintenanceRate.times(3600))}
+                                        disabled={eternityFragments.lt(maintenanceRate.times(3600)) || maintenanceRate.lte(0)}
                                     >
                                         1 Hour
                                     </Button>
                                     <Button
                                         variant="outline"
                                         className="bg-background/50 border h-9 text-xs font-bold hover:bg-primary hover:text-primary-foreground"
-                                        onClick={() => depositInTreasury(maintenanceRate.times(3600 * 10))}
-                                        disabled={iterons.lt(maintenanceRate.times(3600 * 10)) || maintenanceRate.lte(0)}
+                                        onClick={() => depositInReservoir(maintenanceRate.times(3600 * 10))}
+                                        disabled={eternityFragments.lt(maintenanceRate.times(3600 * 10)) || maintenanceRate.lte(0)}
                                     >
                                         10 Hours
                                     </Button>
                                     <Button
                                         variant="outline"
                                         className="bg-background/50 border h-9 text-xs font-bold hover:bg-primary hover:text-primary-foreground"
-                                        onClick={() => depositInTreasury(maintenanceRate.times(3600 * 24))}
-                                        disabled={iterons.lt(maintenanceRate.times(3600 * 24)) || maintenanceRate.lte(0)}
+                                        onClick={() => depositInReservoir(maintenanceRate.times(3600 * 24))}
+                                        disabled={eternityFragments.lt(maintenanceRate.times(3600 * 24)) || maintenanceRate.lte(0)}
                                     >
                                         24 Hours
                                     </Button>
                                     <Button
                                         variant="outline"
                                         className="bg-background/50 border-2 border-primary/30 h-9 text-xs font-black shadow-sm hover:bg-primary hover:text-primary-foreground text-primary"
-                                        onClick={() => depositInTreasury('all')}
-                                        disabled={iterons.lte(0)}
+                                        onClick={() => depositInReservoir('all')}
+                                        disabled={eternityFragments.lte(0)}
                                     >
                                         <ArrowBigUpDash className="w-4 h-4 mr-1.5" />
                                         INFUSE ALL

@@ -93,7 +93,7 @@ const SettingsView = () => {
             </div>
 
             <div className="text-center text-xs text-muted-foreground mt-8">
-              Chronos Iteratio v0.1.3-beta
+              Breaking Infinity v0.1.3-beta
             </div>
           </div>
         )}

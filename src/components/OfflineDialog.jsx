@@ -18,7 +18,7 @@ const OfflineDialog = () => {
 
     if (!offlineResults) return null;
 
-    const { totalGap, effectiveTime, treasuryUsed, depleted } = offlineResults;
+    const { totalGap, effectiveTime, reservoirUsed, depleted } = offlineResults;
 
     return (
         <AlertDialog open={!!offlineResults}>
@@ -54,7 +54,7 @@ const OfflineDialog = () => {
                     <div className="grid grid-cols-1 gap-2 text-sm">
                         <div className="flex justify-between items-center p-3 bg-background rounded-lg border border-border/40">
                             <span className="text-muted-foreground line-clamp-1">Stabilization Cost</span>
-                            <span className="font-mono font-bold">{formatNumber(treasuryUsed)} Fragments</span>
+                            <span className="font-mono font-bold">{formatNumber(reservoirUsed)} Eternity Fragments</span>
                         </div>
                     </div>
                 </div>

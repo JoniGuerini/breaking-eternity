@@ -38,7 +38,7 @@ export const TALENT_DATA = [
     {
         id: 'precision_tuning',
         name: 'Precision Tuning',
-        description: 'Generators produce fragments faster based on Scientist Rank.',
+        description: 'Generators produce Eternity Fragments faster based on Scientist Rank.',
         maxLevel: 10,
         position: { x: -0.5, y: 2 },
         getCost: () => 1,
@@ -62,7 +62,7 @@ export const TALENT_DATA = [
     {
         id: 'reservoir_expansion',
         name: 'Reservoir Expansion',
-        description: 'Fragments infused in the reservoir are 20% more effective at maintaining stability.',
+        description: 'Eternity Fragments infused in the reservoir are 20% more effective at maintaining stability.',
         maxLevel: 10,
         position: { x: 0.5, y: 2 },
         getCost: () => 1,
@@ -97,7 +97,7 @@ export const TALENT_DATA = [
     {
         id: 'eternal_feedback',
         name: 'Eternal Feedback',
-        description: 'Generator production is increased based on total fragments collected.',
+        description: 'Generator production is increased based on total Eternity Fragments collected.',
         maxLevel: 10,
         position: { x: -1.0, y: 4 },
         getCost: () => 1,

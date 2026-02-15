@@ -90,11 +90,11 @@ export const TimeShiftPanel = ({ isOverlay = false }) => {
                         </div>
                     </div>
 
-                    {/* Flux Reservoir Section */}
+                    {/* Temporal Reservoir Section */}
                     <div className="pt-4 border-t border-white/5">
                         <div className="flex justify-between items-end mb-3">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Flux Reservoir</span>
+                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Temporal Reservoir</span>
                                 <span className="text-sm font-mono text-zinc-500 font-bold">{Math.round((storedTime / (gameState.maxStoredTime || 1)) * 100)}% Available</span>
                             </div>
                             <span className="text-xl font-mono font-bold tracking-tighter text-white">

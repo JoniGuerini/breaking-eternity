@@ -21,7 +21,7 @@ const generateMissions = () => {
             let mission = {
                 id: missionId,
                 minRank: rank,
-                reward: { type: 'insight', amount: new Decimal(rank * 2), label: `${rank * 2} Insights` }
+                reward: { type: 'insight', amount: new Decimal(rank * 2), label: `${formatNumber(rank * 2)} Insights` }
             };
 
             // Scale targets based on rank and mission index within rank
@@ -35,12 +35,12 @@ const generateMissions = () => {
                 mission.type = MISSION_TYPES.COLLECT_FRAGMENTS;
                 mission.name = `Data Harvest ${rank}.${i}`;
                 mission.target = fragmentScale;
-                mission.description = `Collect ${formatNumber(fragmentScale)} Fragments.`;
+                mission.description = `Collect ${formatNumber(fragmentScale)} Eternity Fragments.`;
                 const rewardAmount = fragmentScale.div(2);
                 mission.reward = {
                     type: 'reservoir',
                     amount: rewardAmount,
-                    label: `${formatNumber(rewardAmount)} Fragments`
+                    label: `${formatNumber(rewardAmount)} Eternity Fragments`
                 };
             } else if (typeIndex === 1) {
                 mission.type = MISSION_TYPES.REACH_MILESTONES;
@@ -54,7 +54,7 @@ const generateMissions = () => {
                 const amount = fragmentScale.div(5).ceil();
                 mission.name = `Stability Fund ${rank}.${i}`;
                 mission.target = amount;
-                mission.description = `Deposit ${formatNumber(amount)} Fragments into the Treasury.`;
+                mission.description = `Deposit ${formatNumber(amount)} Eternity Fragments into the Reservoir.`;
             } else if (typeIndex === 3) {
                 mission.type = MISSION_TYPES.OWN_GENERATOR;
                 // Target a generator within reach (usually rank-related)
@@ -82,20 +82,20 @@ const generateMissions = () => {
                     mission.genId = 0;
                     mission.target = new Decimal(10);
                     mission.description = "Own 10 Units of Generator 1.";
-                    mission.reward = { type: 'insight', amount: new Decimal(5), label: '5 Insights' };
+                    mission.reward = { type: 'insight', amount: new Decimal(5), label: `${formatNumber(5)} Insights` };
                 } else if (i === 1) {
                     mission.name = "Expansion Protocol";
                     mission.type = MISSION_TYPES.OWN_GENERATOR;
                     mission.genId = 1;
                     mission.target = new Decimal(1);
                     mission.description = "Unlock and own 1 Unit of Generator 2.";
-                    mission.reward = { type: 'insight', amount: new Decimal(10), label: '10 Insights' };
+                    mission.reward = { type: 'insight', amount: new Decimal(10), label: `${formatNumber(10)} Insights` };
                 } else if (i === 2) {
                     mission.name = "Energy Storage";
                     mission.type = MISSION_TYPES.COLLECT_FRAGMENTS;
                     mission.target = new Decimal(100);
                     mission.description = "Collect 100 Eternity Fragments.";
-                    mission.reward = { type: 'reservoir', amount: new Decimal(200), label: '200 Fragments' };
+                    mission.reward = { type: 'reservoir', amount: new Decimal(200), label: `${formatNumber(200)} Eternity Fragments` };
                 } else if (i === 3) {
                     // Specific override for the one the user complained about
                     mission.name = "Lab Analysis 1.3";
@@ -105,7 +105,7 @@ const generateMissions = () => {
                     mission.name = "Data Harvest 1.4";
                     mission.target = new Decimal(500);
                     mission.description = "Collect 500 Eternity Fragments.";
-                    mission.reward = { type: 'reservoir', amount: new Decimal(1000), label: '1000 Fragments' };
+                    mission.reward = { type: 'reservoir', amount: new Decimal(1000), label: `${formatNumber(1000)} Eternity Fragments` };
                 } else if (i === 5) {
                     // Complexity Goal 1.5
                     mission.target = new Decimal(3);

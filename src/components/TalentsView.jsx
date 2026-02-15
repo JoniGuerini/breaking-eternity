@@ -193,7 +193,7 @@ const TalentsView = () => {
     const scrollContainerRef = useRef(null);
     const [isReady, setIsReady] = React.useState(false);
 
-    const focusLevel = gameState.talents['milestone_efficiency'] || 0;
+    const efficiencyLevel = gameState.talents['milestone_efficiency'] || 0;
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);

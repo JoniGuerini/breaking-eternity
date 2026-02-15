@@ -8,7 +8,7 @@ import { formatNumber } from '../utils/formatUtils';
 const GameContext = createContext();
 
 const INITIAL_STATE = {
-    iterons: new Decimal(0),
+    eternityFragments: new Decimal(0),
     insight: new Decimal(0),
     generators: Array.from({ length: 50 }, (_, i) => ({
         id: i,
@@ -20,7 +20,7 @@ const INITIAL_STATE = {
     lastTick: Date.now(),
     showFPS: true,
     research: {},
-    treasuryIterons: new Decimal(0),
+    reservoirEternityFragments: new Decimal(0),
     offlineGap: 0,
     isTimeShiftDismissed: false,
     activeTime: 0,
@@ -49,7 +49,7 @@ export const GameProvider = ({ children }) => {
 
     const deserializeState = (json) => {
         const parsed = JSON.parse(json);
-        parsed.iterons = new Decimal(parsed.iterons);
+        parsed.eternityFragments = new Decimal(parsed.eternityFragments || parsed.iterons || 0);
         parsed.insight = parsed.insight ? new Decimal(parsed.insight) : new Decimal(0);
         parsed.generators = parsed.generators.map(g => ({
             ...g,
@@ -58,7 +58,7 @@ export const GameProvider = ({ children }) => {
             multiplier: new Decimal(g.multiplier),
             costBase: new Decimal(g.costBase),
         }));
-        parsed.treasuryIterons = new Decimal(parsed.treasuryIterons || 0);
+        parsed.reservoirEternityFragments = new Decimal(parsed.reservoirEternityFragments || parsed.treasuryEternityFragments || parsed.treasuryIterons || 0);
         parsed.talentPoints = parsed.talentPoints || 0;
 
         parsed.research = parsed.research || {};
@@ -131,10 +131,10 @@ export const GameProvider = ({ children }) => {
         const tuningLevel = state.talents?.['precision_tuning'] || 0;
         const tuningMult = 1 + (tuningLevel * 0.02 * state.experimentRank);
         const feedbackLevel = state.talents?.['eternal_feedback'] || 0;
-        // Simple feedback based on playtime/rank as proxy for "total fragments" if we don't have a dedicated counter
+        // Simple feedback based on playtime/rank as proxy for "total Eternity Fragments" if we don't have a dedicated counter
         const feedbackMult = 1 + (feedbackLevel * 0.05);
         const nowTs = Date.now();
-        const isOverclocked = state.overclockActive?.[id] && state.overclockActive[id] > nowTs && state.treasuryIterons.gt(0);
+        const isOverclocked = state.overclockActive?.[id] && state.overclockActive[id] > nowTs && state.reservoirEternityFragments.gt(0);
         return new Decimal(1 + level).times(refinementMult).times(anchorMult).times(tuningMult).times(feedbackMult).times(isOverclocked ? 5 : 1);
     }, [countMaxedTalents]);
 
@@ -216,17 +216,17 @@ export const GameProvider = ({ children }) => {
         if (gapSec < 60) return loadedState;
         const rate = getMaintenanceRate(loadedState);
         let effectiveTime = gapSec;
-        let treasuryUsed = new Decimal(0);
+        let reservoirUsed = new Decimal(0);
         if (rate.gt(0)) {
             const expansionLevel = loadedState.talents?.['reservoir_expansion'] || 0;
-            const maxAffordable = loadedState.treasuryIterons.div(rate).times(1 + (expansionLevel * 0.2));
+            const maxAffordable = loadedState.reservoirEternityFragments.div(rate).times(1 + (expansionLevel * 0.2));
             effectiveTime = Math.min(gapSec, maxAffordable.toNumber());
-            treasuryUsed = rate.times(effectiveTime / (1 + (expansionLevel * 0.2)));
+            reservoirUsed = rate.times(effectiveTime / (1 + (expansionLevel * 0.2)));
         } else {
             effectiveTime = 0;
         }
         const nextState = { ...loadedState };
-        nextState.treasuryIterons = nextState.treasuryIterons.sub(treasuryUsed);
+        nextState.reservoirEternityFragments = nextState.reservoirEternityFragments.sub(reservoirUsed);
         nextState.playtime = (nextState.playtime || 0) + effectiveTime;
         const gens = nextState.generators.map(g => ({ ...g }));
         const offlineLevel = nextState.talents?.['offline_refinement'] || 0;
@@ -234,7 +234,7 @@ export const GameProvider = ({ children }) => {
 
         if (gens[0].amount.gt(0)) {
             const payout = gens[0].amount.times(gens[0].multiplier).times(getEfficiencyMultiplier(0)).times(getBaseProduction(0)).times(effectiveTime).times(offlineMult);
-            nextState.iterons = nextState.iterons.add(payout);
+            nextState.eternityFragments = nextState.eternityFragments.add(payout);
         }
         for (let i = 1; i < 50; i++) {
             if (gens[i].amount.gt(0)) {
@@ -243,7 +243,7 @@ export const GameProvider = ({ children }) => {
             }
         }
         nextState.generators = gens;
-        nextState.offlineResults = { totalGap: gapSec, effectiveTime, treasuryUsed, depleted: effectiveTime < gapSec };
+        nextState.offlineResults = { totalGap: gapSec, effectiveTime, reservoirUsed, depleted: effectiveTime < gapSec };
         return nextState;
     }, [getMaintenanceRate, getEfficiencyMultiplier, getBaseProduction]);
 
@@ -264,7 +264,7 @@ export const GameProvider = ({ children }) => {
         stateRef.current = {
             ...currentState,
             generators: newGenerators,
-            iterons: currentState.iterons.add(gen0Payout),
+            eternityFragments: currentState.eternityFragments.add(gen0Payout),
             lastTick: Date.now(),
             playtime: (currentState.playtime || 0) + dt,
             missionStats: {
@@ -292,11 +292,22 @@ export const GameProvider = ({ children }) => {
 
     // --- ACTIONS ---
     const saveGame = useCallback(() => {
-        localStorage.setItem('chronos-iteratio-save', serializeState(stateRef.current));
+        localStorage.setItem('breaking-infinity-save', serializeState(stateRef.current));
     }, []);
 
     const loadGame = useCallback(() => {
-        const saved = localStorage.getItem('chronos-iteratio-save');
+        // Try new key first
+        let saved = localStorage.getItem('breaking-infinity-save');
+
+        // Fallback to old key for migration
+        if (!saved) {
+            saved = localStorage.getItem('chronos-iteratio-save');
+            if (saved) {
+                console.log("Migrating legacy save to Breaking Infinity...");
+                // Note: deserializeState handles the internal property renaming
+            }
+        }
+
         if (saved) {
             const loaded = processOfflineProduction(deserializeState(saved));
             setGameState(loaded);
@@ -305,7 +316,8 @@ export const GameProvider = ({ children }) => {
     }, [processOfflineProduction]);
 
     const hardReset = useCallback(() => {
-        localStorage.removeItem('chronos-iteratio-save');
+        localStorage.removeItem('breaking-infinity-save');
+        localStorage.removeItem('chronos-iteratio-save'); // Clean up old save too
         setGameState(INITIAL_STATE);
         window.location.reload();
     }, []);
@@ -313,9 +325,9 @@ export const GameProvider = ({ children }) => {
     const manualClick = useCallback(() => {
         setGameState(prev => {
             const next = { ...prev };
-            next.iterons = next.iterons.add(1);
+            next.eternityFragments = next.eternityFragments.add(1);
             const kineticLevel = next.talents?.['kinetic_clique'] || 0;
-            if (kineticLevel > 0) next.iterons = next.iterons.add(calculateProduction(next).times(kineticLevel * 0.1));
+            if (kineticLevel > 0) next.eternityFragments = next.eternityFragments.add(calculateProduction(next).times(kineticLevel * 0.1));
             return next;
         });
     }, [calculateProduction]);
@@ -323,11 +335,11 @@ export const GameProvider = ({ children }) => {
     const buyGenerator = useCallback((id) => {
         setGameState(prev => {
             const cost = getGeneratorCost(id);
-            if (prev.iterons.lt(cost)) return prev;
+            if (prev.eternityFragments.lt(cost)) return prev;
             const next = { ...prev, generators: prev.generators.map(g => ({ ...g })) };
             const gen = next.generators[id];
             const prevMilestone = getNextMilestone(gen.amount);
-            next.iterons = next.iterons.sub(cost);
+            next.eternityFragments = next.eternityFragments.sub(cost);
             gen.amount = gen.amount.add(1);
             gen.bought = gen.bought.add(1);
             const newMilestone = getNextMilestone(gen.amount);
@@ -391,7 +403,7 @@ export const GameProvider = ({ children }) => {
             if (!mission) return prev;
             const next = { ...prev, completedMissions: [...prev.completedMissions, missionId], experimentXP: prev.experimentXP + 1 };
             if (mission.reward.type === 'insight') next.insight = next.insight.add(mission.reward.amount);
-            if (mission.reward.type === 'reservoir') next.iterons = next.iterons.add(mission.reward.amount);
+            if (mission.reward.type === 'reservoir') next.eternityFragments = next.eternityFragments.add(mission.reward.amount);
             return next;
         });
     }, []);
@@ -409,14 +421,14 @@ export const GameProvider = ({ children }) => {
         });
     }, [getXPRequired]);
 
-    const depositInTreasury = useCallback((amount) => {
+    const depositInReservoir = useCallback((amount) => {
         setGameState(prev => {
-            const toDeposit = amount === 'all' ? prev.iterons : Decimal.min(new Decimal(amount), prev.iterons);
+            const toDeposit = amount === 'all' ? prev.eternityFragments : Decimal.min(new Decimal(amount), prev.eternityFragments);
             if (toDeposit.lte(0)) return prev;
             return {
                 ...prev,
-                iterons: prev.iterons.sub(toDeposit),
-                treasuryIterons: prev.treasuryIterons.add(toDeposit),
+                eternityFragments: prev.eternityFragments.sub(toDeposit),
+                reservoirEternityFragments: prev.reservoirEternityFragments.add(toDeposit),
                 missionStats: {
                     ...prev.missionStats,
                     totalDeposited: (prev.missionStats.totalDeposited || new Decimal(0)).add(toDeposit)
@@ -464,7 +476,7 @@ export const GameProvider = ({ children }) => {
             gameState, tick, manualClick, buyGenerator, getGeneratorCost,
             saveGame, loadGame, hardReset, getNextMilestone, getGeneratorProduction,
             calculateProduction, calculateMultiplier, toggleFPS, getBaseProduction, buyResearch,
-            buyTalent, respecTalents, dismissOfflineResults, depositInTreasury,
+            buyTalent, respecTalents, dismissOfflineResults, depositInReservoir,
             getMaintenanceRate, getGeneratorMaintenance, dismissTimeShift,
             restoreTimeShift, toggleOverclock: activateOverclock,
             activateOverclock, deactivateOverclock, claimMissionReward,

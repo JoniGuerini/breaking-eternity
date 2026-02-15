@@ -26,7 +26,7 @@ const GlobalExperimentCard = ({ mission, onClaim }) => {
                         {mission.description}
                     </p>
                 </div>
-                <Badge variant="outline" className={`h-4 px-1.5 text-[9px] whitespace-nowrap shrink-0 font-bold uppercase tracking-wider ${mission.canClaim ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-muted/40 border-border text-muted-foreground'}`}>
+                <Badge variant="outline" className={`h-4 px-1.5 text-[9px] whitespace-nowrap shrink-0 font-bold tracking-wider ${mission.canClaim ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-muted/40 border-border text-muted-foreground'}`}>
                     {mission.reward.label}
                 </Badge>
             </div>
@@ -58,7 +58,7 @@ const GlobalExperimentCard = ({ mission, onClaim }) => {
 const GlobalExperimentsList = () => {
     const { gameState, claimMissionReward, getXPRequired, rankUp } = useGame();
     if (!gameState) return null;
-    const { completedMissions, missionStats, iterons, experimentRank, experimentXP } = gameState;
+    const { completedMissions, missionStats, eternityFragments, experimentRank, experimentXP } = gameState;
 
     const xpReq = getXPRequired(experimentRank);
     const xpPercent = (experimentXP / xpReq) * 100;
@@ -71,7 +71,7 @@ const GlobalExperimentsList = () => {
             .map(mission => {
                 let progress = new Decimal(0);
                 if (mission.type === MISSION_TYPES.REACH_MILESTONES) progress = new Decimal(missionStats.totalMilestones);
-                if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = iterons;
+                if (mission.type === MISSION_TYPES.COLLECT_FRAGMENTS) progress = eternityFragments;
                 if (mission.type === MISSION_TYPES.DEPOSIT_FRAGMENTS) progress = missionStats.totalDeposited || new Decimal(0);
                 if (mission.type === MISSION_TYPES.OWN_GENERATOR) progress = gameState.generators[mission.genId].amount;
                 if (mission.type === MISSION_TYPES.BUY_RESEARCH) {
@@ -85,7 +85,7 @@ const GlobalExperimentsList = () => {
                 return { ...mission, canClaim, progress, progressPercent };
             })
             .slice(0, 5);
-    }, [completedMissions, missionStats, iterons, experimentRank, gameState.generators, gameState.research]);
+    }, [completedMissions, missionStats, eternityFragments, experimentRank, gameState.generators, gameState.research]);
 
     if (activeMissions.length === 0 && experimentRank === 1 && experimentXP === 0) return null;
 

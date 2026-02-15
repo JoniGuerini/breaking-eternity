@@ -28,7 +28,7 @@ const GeneratorList = () => {
 
                         return gameState.generators.filter(gen => gen.id <= maxOwnedId + 1).map((gen) => {
                             const cost = getGeneratorCost(gen.id);
-                            const canAfford = gameState.iterons.gte(cost);
+                            const canAfford = gameState.eternityFragments.gte(cost);
                             const multiplier = calculateMultiplier(gen.amount);
                             const nextMilestone = getNextMilestone(gen.amount);
                             const productionPerSecond = getGeneratorProduction(gen.id);
@@ -48,7 +48,7 @@ const GeneratorList = () => {
                                     activateOverclock={activateOverclock}
                                     deactivateOverclock={deactivateOverclock}
                                     getMaintenanceRate={getMaintenanceRate}
-                                    reservoirFragments={gameState.treasuryIterons}
+                                    reservoirEternityFragments={gameState.reservoirEternityFragments}
                                 />
                             );
                         });

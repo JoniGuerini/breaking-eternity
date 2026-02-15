@@ -23,7 +23,7 @@ const OverclockDialog = ({
     onConfirm,
     generator,
     baseMaintenanceRate,
-    reservoirFragments
+    reservoirEternityFragments
 }) => {
     const [duration, setDuration] = useState(5); // Default 5 minutes
 
@@ -34,9 +34,9 @@ const OverclockDialog = ({
         return ratePerSec.times(duration * 60);
     }, [baseMaintenanceRate, duration]);
 
-    const canAfford = reservoirFragments.gte(projectedCost);
-    const costPercentage = reservoirFragments.gt(0)
-        ? projectedCost.div(reservoirFragments).times(100).toNumber()
+    const canAfford = reservoirEternityFragments.gte(projectedCost);
+    const costPercentage = reservoirEternityFragments.gt(0)
+        ? projectedCost.div(reservoirEternityFragments).times(100).toNumber()
         : 100;
 
     return (
@@ -95,7 +95,7 @@ const OverclockDialog = ({
                                 <span className={`text-2xl font-mono font-bold ${canAfford ? 'text-foreground' : 'text-destructive'}`}>
                                     {formatNumber(projectedCost)}
                                 </span>
-                                <span className="text-xs text-muted-foreground uppercase font-semibold">Fragments</span>
+                                <span className="text-xs text-muted-foreground uppercase font-semibold">Eternity Fragments</span>
                             </div>
 
                             <div className="space-y-2">
@@ -116,7 +116,7 @@ const OverclockDialog = ({
                             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                             <p className="text-xs leading-normal">
                                 <span className="font-bold">Warning:</span> Insufficient stability in the Reservoir.
-                                Overclocking will terminate prematurely once fragments reach zero.
+                                Overclocking will terminate prematurely once Eternity Fragments reach zero.
                             </p>
                         </div>
                     )}

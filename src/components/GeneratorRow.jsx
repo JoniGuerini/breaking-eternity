@@ -38,7 +38,7 @@ const GeneratorRow = ({
     activateOverclock,
     deactivateOverclock,
     getMaintenanceRate,
-    reservoirFragments
+    reservoirEternityFragments
 }) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -125,7 +125,7 @@ const GeneratorRow = ({
                                 <span className={`font-mono text-lg font-bold ${canAfford ? 'text-green-500' : 'text-red-400'}`}>
                                     {formatNumber(cost)}
                                 </span>
-                                <span className="text-xs text-foreground uppercase font-bold">Fragments</span>
+                                <span className="text-xs text-foreground uppercase font-bold">Eternity Fragments</span>
                             </div>
                         </div>
                     </Button>
@@ -157,7 +157,7 @@ const GeneratorRow = ({
                                                         <span>{formatNumber(productionPerSecond)}</span>
                                                         <span className="text-muted-foreground">/s</span>
                                                         <span className="text-primary/80 text-[10px] md:text-xs ml-1">
-                                                            {generator.id === 0 ? "Fragments" : `Gen ${generator.id}`}
+                                                            {generator.id === 0 ? "Eternity Fragments" : `Gen ${generator.id}`}
                                                         </span>
                                                     </div>
                                                     <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider group-hover:text-foreground/80 transition-colors">Production</span>
@@ -269,7 +269,7 @@ const GeneratorRow = ({
                                         }}
                                         generator={generator}
                                         baseMaintenanceRate={baseMaintenanceRate}
-                                        reservoirFragments={reservoirFragments}
+                                        reservoirEternityFragments={reservoirEternityFragments}
                                     />
 
                                     <Button
