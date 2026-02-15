@@ -123,7 +123,7 @@ const ChronosView = () => {
                                 <TrendingDown className="w-4 h-4 text-primary" />
                                 <CardTitle className="text-sm font-bold uppercase tracking-wider">Stability Report</CardTitle>
                             </div>
-                            <div className="text-xs font-mono font-bold text-destructive">
+                            <div className="text-xs font-mono font-bold text-red-500">
                                 Total Consumption: -{formatNumber(maintenanceRate)}/s
                             </div>
                         </div>
@@ -139,7 +139,7 @@ const ChronosView = () => {
                                         <span className="text-xs font-bold text-foreground/80">Generator {item.id + 1}</span>
                                     </div>
                                     <div className="flex justify-end items-center gap-2">
-                                        <span className="text-xs font-mono font-bold text-destructive">-{formatNumber(item.cost)}/s</span>
+                                        <span className="text-xs font-mono font-bold text-red-500">-{formatNumber(item.cost)}/s</span>
                                         <span className="text-[10px] font-medium text-muted-foreground w-12 text-right">
                                             {maintenanceRate.gt(0)
                                                 ? ((item.cost.toNumber() / maintenanceRate.toNumber()) * 100).toFixed(1)

@@ -110,7 +110,7 @@ const GeneratorRow = ({
                         <div className={`flex flex-col items-start gap-0.5 text-left ${!canAfford ? 'opacity-80' : 'opacity-100'}`}>
                             <span className="text-[10px] uppercase tracking-wider text-foreground font-bold">Unlock Cost</span>
                             <div className="flex items-center gap-2">
-                                <span className={`font-mono text-lg font-bold ${canAfford ? 'text-green-500' : 'text-red-400'}`}>
+                                <span className={`font-mono text-lg font-bold ${canAfford ? 'text-green-500' : 'text-red-500'}`}>
                                     {formatNumber(cost)}
                                 </span>
                                 <span className="text-xs text-foreground uppercase font-bold">Eternity Fragments</span>
@@ -130,17 +130,18 @@ const GeneratorRow = ({
                         <CardContent className="p-0 flex flex-col">
                             {/* Main Content Area */}
                             <div className="p-3 md:p-4 flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 items-center">
-                                {/* 1. Rank Badge - NEW POSITION */}
-                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
+                                {/* 1. Name Block - BACK TO FIRST */}
+                                <div className="w-full lg:col-span-2 flex flex-col items-start justify-center lg:border-r border-border/10">
+                                    <h3 className="font-bold text-base md:text-lg text-foreground leading-tight">Generator {generator.id + 1}</h3>
+                                    <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Unit</span>
+                                </div>
+
+                                {/* 2. Rank Badge - SECOND POSITION */}
+                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center lg:border-r border-border/10">
                                     <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0 h-5 md:h-6 bg-primary/10 text-primary border-primary/20 pointer-events-none mb-1">
                                         Rank {level}
                                     </Badge>
                                     <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Milestones</span>
-                                </div>
-
-                                {/* 2. Name Block - NEW POSITION */}
-                                <div className="w-full lg:col-span-2 flex items-center justify-start lg:border-r border-border/10">
-                                    <h3 className="font-bold text-base md:text-lg text-foreground leading-tight">Generator {generator.id + 1}</h3>
                                 </div>
 
                                 {/* 3. Owned Block - NEW POSITION */}

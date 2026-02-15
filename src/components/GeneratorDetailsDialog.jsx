@@ -89,7 +89,7 @@ const GeneratorDetailsDialog = ({
                             <div className="space-y-2">
                                 <div className="flex justify-between items-end">
                                     <span className="text-sm text-muted-foreground">Maintenance</span>
-                                    <span className="text-base font-mono font-bold text-destructive leading-none">
+                                    <span className="text-base font-mono font-bold text-red-500 leading-none">
                                         -{formatNumber(baseMaintenanceRate.times(isActive ? 5 : 1))}<span className="text-xs font-normal ml-1">/s</span>
                                     </span>
                                 </div>
@@ -123,13 +123,6 @@ const GeneratorDetailsDialog = ({
                     </div>
                 </div>
 
-                <Separator className="my-6 opacity-50" />
-
-                <div className="flex justify-end">
-                    <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-                        System Analysis: Unit_{genNum}_Operational
-                    </div>
-                </div>
             </DialogContent>
         </Dialog>
     );

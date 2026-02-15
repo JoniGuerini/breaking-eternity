@@ -31,12 +31,16 @@ const generateMissions = () => {
             // Cycle through types to ensure variety
             const typeIndex = (rank + i) % 5;
 
+            // Target multipliers to ensure variety even within the same type
+            const targetMultiplier = 1 + (i * 0.25);
+
             if (typeIndex === 0) {
                 mission.type = MISSION_TYPES.COLLECT_FRAGMENTS;
+                const target = fragmentScale.times(1 + i * 0.5).round();
                 mission.name = `Data Harvest ${rank}.${i}`;
-                mission.target = fragmentScale;
-                mission.description = `Collect ${formatNumber(fragmentScale)} Eternity Fragments.`;
-                const rewardAmount = fragmentScale.div(2);
+                mission.target = target;
+                mission.description = `Collect ${formatNumber(target)} Eternity Fragments.`;
+                const rewardAmount = target.div(2).round();
                 mission.reward = {
                     type: 'reservoir',
                     amount: rewardAmount,
@@ -44,37 +48,33 @@ const generateMissions = () => {
                 };
             } else if (typeIndex === 1) {
                 mission.type = MISSION_TYPES.REACH_MILESTONES;
-                // Reduced scaling: rank * 2 instead of rank * 5
-                const targetCount = rank * 2 + i * 1;
+                const targetCount = Math.floor((rank * 2) + (i * 1.5) + 1);
                 mission.name = `Complexity Goal ${rank}.${i}`;
                 mission.target = new Decimal(targetCount);
                 mission.description = `Reach a combined total of ${targetCount} Milestones.`;
             } else if (typeIndex === 2) {
                 mission.type = MISSION_TYPES.DEPOSIT_FRAGMENTS;
-                const amount = fragmentScale.div(5).ceil();
+                const amount = fragmentScale.div(5).times(1 + i * 0.3).ceil();
                 mission.name = `Stability Fund ${rank}.${i}`;
                 mission.target = amount;
                 mission.description = `Deposit ${formatNumber(amount)} Eternity Fragments into the Reservoir.`;
             } else if (typeIndex === 3) {
                 mission.type = MISSION_TYPES.OWN_GENERATOR;
-                // Target a generator within reach (usually rank-related)
-                const genId = Math.min(Math.floor((rank - 1) / 2) + (i % 3), 49);
-                // Ensure target is a nice round number (e.g., 80 instead of 79.999)
-                const amount = new Decimal(10).times(Decimal.pow(2, i % 4)).round();
+                const genId = Math.min(Math.floor((rank - 1) / 2) + (i % 3), 4);
+                const amount = new Decimal(10).times(Decimal.pow(1.5, i)).round();
                 mission.genId = genId;
                 mission.name = `Unit Deployment ${rank}.${i}`;
                 mission.target = amount;
                 mission.description = `Own ${formatNumber(amount)} Units of Generator ${genId + 1}.`;
             } else {
                 mission.type = MISSION_TYPES.BUY_RESEARCH;
-                // Slower scaling: rank * 1.2 instead of rank * 1.5
-                const researchLevels = Math.floor(rank * 1.2 + i * 0.3);
+                const researchLevels = Math.floor(rank * 1.2 + i * 0.8) + 1;
                 mission.name = `Lab Analysis ${rank}.${i}`;
                 mission.target = new Decimal(researchLevels);
                 mission.description = `Complete ${researchLevels} levels of Research.`;
             }
 
-            // Specific Overrides for Rank 1 (to match user request)
+            // Specific Overrides for Rank 1 (Tutorial/Early Game calibration)
             if (rank === 1) {
                 if (i === 0) {
                     mission.name = "Generator Startup";
@@ -97,23 +97,33 @@ const generateMissions = () => {
                     mission.description = "Collect 100 Eternity Fragments.";
                     mission.reward = { type: 'reservoir', amount: new Decimal(200), label: `${formatNumber(200)} Eternity Fragments` };
                 } else if (i === 3) {
-                    // Specific override for the one the user complained about
-                    mission.name = "Lab Analysis 1.3";
+                    mission.name = "Basic Research";
+                    mission.type = MISSION_TYPES.BUY_RESEARCH;
                     mission.target = new Decimal(3);
                     mission.description = "Complete 3 levels of Research.";
                 } else if (i === 4) {
                     mission.name = "Data Harvest 1.4";
+                    mission.type = MISSION_TYPES.COLLECT_FRAGMENTS;
                     mission.target = new Decimal(500);
                     mission.description = "Collect 500 Eternity Fragments.";
                     mission.reward = { type: 'reservoir', amount: new Decimal(1000), label: `${formatNumber(1000)} Eternity Fragments` };
                 } else if (i === 5) {
-                    // Complexity Goal 1.5
+                    mission.name = "Complexity Goal 1.5";
+                    mission.type = MISSION_TYPES.REACH_MILESTONES;
                     mission.target = new Decimal(3);
                     mission.description = "Reach a combined total of 3 Milestones.";
+                } else if (i === 8) {
+                    // Changed from 8 levels of research to 10k fragments at user request
+                    mission.name = "Data Overload";
+                    mission.type = MISSION_TYPES.COLLECT_FRAGMENTS;
+                    mission.target = new Decimal(10000);
+                    mission.description = "Collect 10,000 Eternity Fragments.";
+                    mission.reward = { type: 'reservoir', amount: new Decimal(20000), label: `${formatNumber(20000)} Eternity Fragments` };
                 } else if (i === 10) {
-                    // Complexity Goal 1.10
-                    mission.target = new Decimal(5);
-                    mission.description = "Reach a combined total of 5 Milestones.";
+                    mission.name = "Complexity Goal 1.10";
+                    mission.type = MISSION_TYPES.REACH_MILESTONES;
+                    mission.target = new Decimal(10);
+                    mission.description = "Reach a combined total of 10 Milestones.";
                 }
             }
 

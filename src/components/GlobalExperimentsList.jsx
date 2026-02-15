@@ -94,13 +94,13 @@ const GlobalExperimentsList = () => {
             {/* Rank Progress Bar / Level Up Button */}
             <div
                 className={`relative flex items-center gap-4 bg-card border rounded-xl px-4 py-3 shadow-sm transition-all duration-300 ${canRankUp
-                    ? 'border-primary ring-2 ring-primary/20 cursor-pointer hover:bg-primary/5'
+                    ? 'border-amber-500/40 ring-2 ring-amber-500/10 cursor-pointer hover:bg-amber-500/5 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
                     : 'border-border hover:bg-accent/10'
                     }`}
                 onClick={() => canRankUp && rankUp()}
             >
                 <div className="flex flex-col min-w-[100px]">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70 leading-none mb-1">
+                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] leading-none mb-1 ${canRankUp ? 'text-amber-400' : 'text-primary/70'}`}>
                         {canRankUp ? 'Promotion Ready' : 'Scientist Rank'}
                     </span>
                     <span className="text-base font-black leading-none text-foreground tracking-tighter">Level {experimentRank}</span>
@@ -108,20 +108,20 @@ const GlobalExperimentsList = () => {
 
                 <div className="flex-1 space-y-1.5">
                     <div className="flex justify-between items-end text-[10px] font-mono font-bold tracking-tight">
-                        <span className="text-muted-foreground uppercase opacity-50 tracking-widest">
+                        <span className={`uppercase opacity-50 tracking-widest ${canRankUp ? 'text-amber-400' : 'text-muted-foreground'}`}>
                             {canRankUp ? 'CLICK TO ADVANCE RANK' : 'Growth Progress'}
                         </span>
-                        <span className="text-primary/90">{formatNumber(experimentXP)} / {formatNumber(xpReq)} XP</span>
+                        <span className={`${canRankUp ? 'text-amber-400' : 'text-primary/90'}`}>{formatNumber(experimentXP)} / {formatNumber(xpReq)} XP</span>
                     </div>
                     <Progress
                         value={xpPercent}
-                        className={`h-1.5 ${canRankUp ? 'bg-primary/30' : 'bg-primary/10'}`}
-                        indicatorClassName={`${canRankUp ? 'bg-primary animate-pulse' : 'bg-primary'} shadow-[0_0_10px_rgba(var(--primary),0.3)]`}
+                        className={`h-1.5 ${canRankUp ? 'bg-amber-500/20' : 'bg-primary/10'}`}
+                        indicatorClassName={`${canRankUp ? 'bg-amber-500 animate-pulse' : 'bg-primary'} shadow-[0_0_10px_rgba(245,158,11,0.4)]`}
                     />
                 </div>
 
                 {canRankUp && (
-                    <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none rounded-xl" />
+                    <div className="absolute inset-0 bg-amber-500/5 animate-pulse pointer-events-none rounded-xl" />
                 )}
             </div>
 

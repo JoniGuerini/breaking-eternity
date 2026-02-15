@@ -68,7 +68,7 @@ const SettingsView = () => {
                     Force Save
                   </Button>
                   <Button onClick={() => setIsResetDialogOpen(true)} variant="destructive" className="w-full">
-                    Hard Reset (Wipe Save)
+                    Hard Reset
                   </Button>
                 </div>
               </div>
