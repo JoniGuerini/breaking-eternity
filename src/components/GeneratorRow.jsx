@@ -130,13 +130,27 @@ const GeneratorRow = ({
                         <CardContent className="p-0 flex flex-col">
                             {/* Main Content Area */}
                             <div className="p-3 md:p-4 flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 items-center">
-                                {/* 1. Name - STATIC */}
-                                <div className="w-full lg:col-span-2 flex items-center justify-start">
+                                {/* 1. Rank Badge - NEW POSITION */}
+                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
+                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0 h-5 md:h-6 bg-primary/10 text-primary border-primary/20 pointer-events-none mb-1">
+                                        Rank {level}
+                                    </Badge>
+                                    <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Milestones</span>
+                                </div>
+
+                                {/* 2. Name Block - NEW POSITION */}
+                                <div className="w-full lg:col-span-2 flex items-center justify-start lg:border-r border-border/10">
                                     <h3 className="font-bold text-base md:text-lg text-foreground leading-tight">Generator {generator.id + 1}</h3>
                                 </div>
 
-                                {/* 2. Production Section */}
-                                <div className="w-full lg:col-span-3 flex flex-col justify-center items-center py-1 lg:border-r border-border/10">
+                                {/* 3. Owned Block - NEW POSITION */}
+                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
+                                    <span className="text-foreground font-mono font-bold text-sm md:text-base">{formatNumber(generator.amount)}</span>
+                                    <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Owned</span>
+                                </div>
+
+                                {/* 4. Production Section - NEW POSITION */}
+                                <div className="w-full lg:col-span-3 flex flex-col justify-center items-center py-1 lg:border-x border-border/10">
                                     <TooltipProvider>
                                         <Tooltip delayDuration={200}>
                                             <TooltipTrigger asChild>
@@ -188,21 +202,7 @@ const GeneratorRow = ({
                                     </TooltipProvider>
                                 </div>
 
-                                {/* 3. Milestone Block */}
-                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
-                                    <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0 h-5 md:h-6 bg-primary/10 text-primary border-primary/20 pointer-events-none mb-1">
-                                        Rank {level}
-                                    </Badge>
-                                    <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Milestones</span>
-                                </div>
-
-                                {/* 4. Owned Block */}
-                                <div className="w-full lg:col-span-1 flex flex-col items-center justify-center">
-                                    <span className="text-foreground font-mono font-bold text-sm md:text-base">{formatNumber(generator.amount)}</span>
-                                    <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-wider">Owned</span>
-                                </div>
-
-                                {/* 5. Next Milestone Block */}
+                                {/* 5. Next Milestone Block - NEW POSITION */}
                                 <div className="w-full lg:col-span-2 flex flex-col items-center justify-center">
                                     <span className="font-mono text-foreground/80 text-[10px] md:text-xs whitespace-nowrap">
                                         {formatNumber(Decimal.min(currentVal, nextVal).sub(nextMilestone.prev || 0))}<span className="opacity-50 mx-0.5">/</span>{formatNumber(nextVal.sub(nextMilestone.prev || 0))}
@@ -212,7 +212,7 @@ const GeneratorRow = ({
                                     </div>
                                 </div>
 
-                                {/* 6. Action Button Block */}
+                                {/* 6. Action Button Block - NEW POSITION */}
                                 <div className="w-full lg:col-span-3 flex items-center justify-center lg:justify-end gap-2">
                                     <TooltipProvider>
                                         <Tooltip delayDuration={200}>
