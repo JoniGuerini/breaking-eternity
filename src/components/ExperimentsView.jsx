@@ -53,39 +53,7 @@ const ExperimentsView = () => {
 
     return (
         <div className="w-full h-full flex flex-col gap-4">
-            {/* Rank Progress Bar / Level Up Button */}
-            <div
-                className={`relative flex items-center gap-4 bg-card border rounded-xl px-4 py-3 shadow-sm transition-all duration-300 ${canRankUp
-                    ? 'border-primary ring-2 ring-primary/20 cursor-pointer hover:bg-primary/5'
-                    : 'border-border'
-                    }`}
-                onClick={() => canRankUp && rankUp()}
-            >
-                <div className="flex flex-col min-w-[100px]">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70 leading-none mb-1">
-                        {canRankUp ? 'Promotion Ready' : 'Scientist Rank'}
-                    </span>
-                    <span className="text-base font-black leading-none text-foreground tracking-tighter">Level {experimentRank}</span>
-                </div>
 
-                <div className="flex-1 space-y-1.5">
-                    <div className="flex justify-between items-end text-[10px] font-mono font-bold tracking-tight">
-                        <span className="text-muted-foreground uppercase opacity-50 tracking-widest">
-                            {canRankUp ? 'CLICK HERE TO ADVANCE SCIENTIST RANK' : 'Curiosity Growth'}
-                        </span>
-                        <span className="text-primary/90">{formatNumber(experimentXP)} / {formatNumber(xpReq)} XP</span>
-                    </div>
-                    <Progress
-                        value={xpPercent}
-                        className={`h-2 ${canRankUp ? 'bg-primary/30' : 'bg-primary/10'}`}
-                        indicatorClassName={`${canRankUp ? 'bg-primary animate-pulse' : 'bg-primary'} shadow-[0_0_10px_rgba(var(--primary),0.3)]`}
-                    />
-                </div>
-
-                {canRankUp && (
-                    <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none rounded-xl" />
-                )}
-            </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-2 pb-8">
                 {missionList.map((mission) => (

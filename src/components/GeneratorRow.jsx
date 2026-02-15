@@ -67,24 +67,12 @@ const GeneratorRow = ({
         const rank = nextMilestone.level;
         if (rank <= 0) return new Decimal(0);
 
-        const tier = generator.id;
-        // Base Cost: (Rank + Tier) * 0.01
-        const baseCost = (rank + tier) * 0.01;
+        const genNum = generator.id + 1;
+        const effLevel = research[`gen${genNum}_eff`] || 0;
+        const resonanceLevel = research[`gen${genNum}_resonance`] || 0;
 
-        // Upgrade Tax: (Tier + 1) * 0.01 per rank of Efficiency and Resonance
-        // Logistics Buffer (speedLevel) is exempt from tax and provides relief
-        const speedLevel = research[`gen${tier + 1}_speed`] || 0;
-        const effLevel = research[`gen${tier + 1}_eff`] || 0;
-        const resonanceLevel = research[`gen${tier + 1}_resonance`] || 0;
-        const totalTaxedUpgrades = effLevel + resonanceLevel;
-
-        const taxPerLevel = (tier + 1) * 0.01;
-        const totalTax = totalTaxedUpgrades * taxPerLevel;
-
-        // Logistics Buffer: -0.01 per level
-        const buffer = speedLevel * 0.01;
-
-        return new Decimal(baseCost + totalTax - buffer).max(0);
+        const totalUnits = rank + effLevel + resonanceLevel;
+        return new Decimal(totalUnits).times(genNum * 0.01);
     }, [nextMilestone.level, generator.id, research]);
 
     const insightMultiplier = useMemo(() => {

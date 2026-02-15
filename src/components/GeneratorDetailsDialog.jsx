@@ -24,19 +24,14 @@ const GeneratorDetailsDialog = ({
     const tier = generator.id;
     const rank = nextMilestone.level;
     const researchLevels = {
-        speed: research[`gen${genNum}_speed`] || 0,
         eff: research[`gen${genNum}_eff`] || 0,
         resonance: research[`gen${genNum}_resonance`] || 0
     };
 
-    const { speed: logisticsLevel, eff: efficiencyLevel, resonance: resonanceLevel } = researchLevels;
+    const { eff: efficiencyLevel, resonance: resonanceLevel } = researchLevels;
 
-    const baseRankCost = (rank + tier) * 0.01;
-    // Upgrade Tax excludes Logistics Buffer which is now a reduction
-    const totalTaxedUpgrades = efficiencyLevel + resonanceLevel;
-    const taxPerLevel = (tier + 1) * 0.01;
-    const totalUpgradeTax = totalTaxedUpgrades * taxPerLevel;
-    const logisticsBuffer = logisticsLevel * 0.01;
+    const baseRankCost = rank * (genNum * 0.01);
+    const totalUpgradeTax = (efficiencyLevel + resonanceLevel) * (genNum * 0.01);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -107,12 +102,6 @@ const GeneratorDetailsDialog = ({
                                         <span>Upgrade Tax</span>
                                         <span>-{totalUpgradeTax.toFixed(2)}/s</span>
                                     </div>
-                                    {logisticsLevel > 0 && (
-                                        <div className="flex justify-between items-center text-[11px] font-bold text-blue-400">
-                                            <span>Logistics Buffer</span>
-                                            <span>+{logisticsBuffer.toFixed(2)}/s</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -122,10 +111,6 @@ const GeneratorDetailsDialog = ({
                     <div className="space-y-6">
                         <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Technical Ranks</h4>
                         <div className="grid gap-3">
-                            <div className="flex justify-between items-center p-3 rounded-lg border border-border bg-muted/30">
-                                <span className="text-xs font-medium">Logistics Buffer</span>
-                                <span className="font-bold text-sm">Rank {logisticsLevel}</span>
-                            </div>
                             <div className="flex justify-between items-center p-3 rounded-lg border border-border bg-muted/30">
                                 <span className="text-xs font-medium">Production Yield</span>
                                 <span className="font-bold text-sm">Rank {efficiencyLevel}</span>
