@@ -22,6 +22,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "break_eternity.js": "^2.1.3",
     "framer-motion": "^12.34.0",
+    "geist": "^1.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

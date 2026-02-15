@@ -32,17 +32,15 @@ const ResearchCard = ({ research, gameState, buyResearch }) => {
                 <div>
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex flex-col">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-0.5">
-                                {research.type || "Research"}
-                            </span>
-                            <h3 className={`font-bold text-lg leading-none tracking-tight ${isMaxed ? 'text-muted-foreground' : 'text-foreground'}`}>
-                                {research.name.split(' ').pop()}
+                            {/* Removed redundant type label */}
+                            <h3 className={`font-bold text-lg leading-none tracking-tight uppercase ${isMaxed ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                {research.type}
                             </h3>
                         </div>
 
                         <div className="flex flex-col items-end gap-1">
                             {isMaxed && (
-                                <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 uppercase font-bold tracking-wider mb-1">
+                                <Badge variant="secondary" className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 uppercase font-bold tracking-wider mb-1">
                                     MAXED
                                 </Badge>
                             )}
@@ -59,20 +57,20 @@ const ResearchCard = ({ research, gameState, buyResearch }) => {
 
                         {isMaxed ? (
                             <div className="text-xs font-mono bg-primary/5 text-primary/80 border border-primary/10 p-2 rounded flex items-center justify-between">
-                                <span className="uppercase tracking-wider font-bold text-[10px]">Effect</span>
+                                <span className="uppercase tracking-wider font-bold text-xs">Effect</span>
                                 <span className="font-bold">{research.getEffectDisplay(currentLevel)}</span>
                             </div>
                         ) : (
                             <div className="flex items-center justify-between text-xs font-mono bg-muted/30 p-2 rounded border border-border/50">
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] uppercase text-muted-foreground tracking-wider mb-0.5">Current</span>
+                                    <span className="text-xs uppercase text-muted-foreground tracking-wider mb-0.5">Current</span>
                                     <span className="text-zinc-300 font-semibold">
                                         {research.getEffectValues(currentLevel).current}
                                     </span>
                                 </div>
                                 <div className="text-muted-foreground/50">➔</div>
                                 <div className="flex flex-col items-end">
-                                    <span className="text-[9px] uppercase text-purple-400/70 tracking-wider mb-0.5">Next</span>
+                                    <span className="text-xs uppercase text-purple-400/70 tracking-wider mb-0.5">Next</span>
                                     <span className="text-purple-400 font-bold">
                                         {research.getEffectValues(currentLevel).next}
                                     </span>
@@ -85,7 +83,7 @@ const ResearchCard = ({ research, gameState, buyResearch }) => {
                 {!isMaxed && (
                     <div className="space-y-3 mt-2">
                         <div className="space-y-1.5">
-                            <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                            <div className="flex justify-between text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                                 <span>Cost</span>
                                 <span>
                                     {formatNumber(gameState.insight)} / {formatNumber(cost)}

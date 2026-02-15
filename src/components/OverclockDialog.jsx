@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Zap, AlertTriangle, Clock, Droplet } from 'lucide-react';
 import { formatNumber } from '../utils/formatUtils';
+import { GENERATOR_NAMES } from '../game/generatorData';
 
 const OverclockDialog = ({
     isOpen,
@@ -27,8 +28,6 @@ const OverclockDialog = ({
 }) => {
     const [duration, setDuration] = useState(5); // Default 5 minutes
 
-    // Calculate cost: (BaseRate * 20 penalty) * seconds
-    // baseMaintenanceRate is already per-second maintenance for this generator
     const projectedCost = useMemo(() => {
         const ratePerSec = baseMaintenanceRate.times(20);
         return ratePerSec.times(duration * 60);
@@ -41,30 +40,22 @@ const OverclockDialog = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                            <Zap className="text-primary h-6 w-6" />
-                        </div>
-                        <DialogTitle>Experimental Overclock</DialogTitle>
-                    </div>
-                    <DialogDescription>
-                        Configure the temporal force for <span className="font-semibold text-foreground">Generator {generator.id + 1}</span>.
-                        This increases production by <span className="font-semibold text-foreground">5x</span> but consumes stability <span className="font-semibold text-foreground">20x faster</span>.
+            <DialogContent className="sm:max-w-[425px] bg-card border-border text-card-foreground p-6 rounded-xl shadow-lg">
+                <DialogHeader className="mb-6 text-left">
+                    <DialogTitle className="text-2xl font-bold tracking-tight">Experimental Overclock</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground mt-2">
+                        Configure the temporal force for <span className="font-semibold text-foreground tracking-tight">{GENERATOR_NAMES[generator.id]}</span>.
+                        Production increases by <span className="text-emerald-500 font-bold">5x</span> with a <span className="text-red-500 font-bold">20x</span> stability penalty.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-6">
+                <div className="space-y-8">
                     {/* Duration Slider */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-end">
-                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                <Clock className="h-3.5 w-3.5" />
-                                Duration
-                            </div>
-                            <span className="text-2xl font-mono font-bold">
-                                {duration} <span className="text-sm font-normal text-muted-foreground">min</span>
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Duration</span>
+                            <span className="text-2xl font-mono font-bold leading-none">
+                                {duration}<span className="text-xs font-normal text-muted-foreground ml-1">min</span>
                             </span>
                         </div>
                         <Slider
@@ -73,61 +64,59 @@ const OverclockDialog = ({
                             max={60}
                             min={1}
                             step={1}
+                            className="py-2"
                         />
                     </div>
 
-                    {/* Cost Estimation Card */}
-                    <Card>
-                        <CardContent className="p-4 space-y-4">
-                            <div className="flex justify-between items-center text-xs uppercase font-semibold tracking-wider text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                    <Droplet className="h-3.5 w-3.5 text-primary" />
-                                    Est. Stability Cost
-                                </div>
-                                {costPercentage > 50 && (
-                                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                                        High Impact
-                                    </Badge>
-                                )}
-                            </div>
+                    {/* Cost Estimation */}
+                    <div className="p-4 rounded-lg border border-border/40 bg-muted/20 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Est. Stability Cost</span>
+                            {costPercentage > 50 && (
+                                <Badge variant="destructive" className="text-[10px] h-5 px-2 uppercase tracking-tight">
+                                    High Impact
+                                </Badge>
+                            )}
+                        </div>
 
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-2xl font-mono font-bold ${canAfford ? 'text-foreground' : 'text-destructive'}`}>
-                                    {formatNumber(projectedCost)}
-                                </span>
-                                <span className="text-xs text-muted-foreground uppercase font-semibold">Eternity Fragments</span>
-                            </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-mono font-bold text-foreground">
+                                {formatNumber(projectedCost)}
+                            </span>
+                            <span className="text-xs text-muted-foreground uppercase font-bold tracking-tight">Eternity Fragments</span>
+                        </div>
 
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-[10px] uppercase font-semibold tracking-tight text-muted-foreground">
-                                    <span>Reservoir Impact</span>
-                                    <span>{costPercentage.toFixed(1)}%</span>
-                                </div>
-                                <Progress
-                                    value={Math.min(100, costPercentage)}
-                                    className="h-1.5"
-                                />
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs uppercase font-bold tracking-tight text-muted-foreground/80">
+                                <span>Reservoir Impact</span>
+                                <span className={costPercentage > 80 ? 'text-red-500' : ''}>{costPercentage.toFixed(1)}%</span>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <Progress
+                                value={Math.min(100, costPercentage)}
+                                className={`h-1.5 ${costPercentage > 80 ? '[&>div]:bg-red-500' : ''}`}
+                            />
+                        </div>
+                    </div>
 
                     {!canAfford && (
-                        <div className="flex gap-3 p-3 rounded-lg bg-muted text-muted-foreground items-start">
-                            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                            <p className="text-xs leading-normal">
-                                <span className="font-bold">Warning:</span> Insufficient stability in the Reservoir.
-                                Overclocking will terminate prematurely once Eternity Fragments reach zero.
+                        <div className="flex gap-3 p-4 rounded-lg bg-muted/40 border border-border/50 text-foreground items-start">
+                            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-orange-500" />
+                            <p className="text-sm leading-tight">
+                                <span className="font-bold">Warning:</span> Insufficient stability.
+                                Overclocking will terminate if Eternity Fragments reach zero.
                             </p>
                         </div>
                     )}
                 </div>
 
-                <DialogFooter>
-                    <DialogCancel onClick={onClose}>Cancel</DialogCancel>
+                <DialogFooter className="mt-8 gap-3 sm:gap-2">
+                    <DialogCancel onClick={onClose} className="h-10 px-6 font-semibold border-border/50 text-xs uppercase tracking-wider">
+                        Cancel
+                    </DialogCancel>
                     <Button
                         variant="destructive"
                         onClick={() => onConfirm(duration)}
-                        className="font-semibold uppercase tracking-wider text-xs"
+                        className="h-10 px-6 font-semibold text-xs uppercase tracking-wider"
                     >
                         Initiate Overclock
                     </Button>

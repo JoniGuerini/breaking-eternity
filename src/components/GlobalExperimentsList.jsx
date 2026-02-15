@@ -22,21 +22,21 @@ const GlobalExperimentCard = ({ mission, onClaim }) => {
                     <h3 className={`text-sm font-bold leading-tight truncate mb-1.5 ${mission.canClaim ? 'text-emerald-400' : 'text-foreground'}`}>
                         {mission.name}
                     </h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug opacity-80">
+                    <p className="text-xs text-muted-foreground/90 line-clamp-2 leading-snug mt-1">
                         {mission.description}
                     </p>
                 </div>
-                <Badge variant="outline" className={`h-4 px-1.5 text-[9px] whitespace-nowrap shrink-0 font-bold tracking-wider ${mission.canClaim ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-muted/40 border-border text-muted-foreground'}`}>
+                <Badge variant="outline" className={`h-6 px-2 text-xs whitespace-nowrap shrink-0 font-bold tracking-wider ${mission.canClaim ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-muted/40 border-border text-muted-foreground'}`}>
                     {mission.reward.label}
                 </Badge>
             </div>
 
             <div className="space-y-1.5 mt-auto">
-                <div className="flex justify-between items-end text-[10px] font-mono font-bold tracking-tight px-0.5">
-                    <span className={`uppercase opacity-50 ${mission.canClaim ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                <div className="flex justify-between items-end text-xs font-mono font-bold tracking-tight px-0.5">
+                    <span className={`uppercase opacity-70 ${mission.canClaim ? 'text-emerald-400' : 'text-muted-foreground'}`}>
                         {mission.canClaim ? 'Ready to Claim' : 'Syncing...'}
                     </span>
-                    <span className={mission.canClaim ? 'text-emerald-400' : 'text-foreground/90'}>
+                    <span className={mission.canClaim ? 'text-emerald-400' : 'text-foreground'}>
                         {formatNumber(mission.progress)} / {formatNumber(mission.target)}
                     </span>
                 </div>
@@ -100,18 +100,18 @@ const GlobalExperimentsList = () => {
                 onClick={() => canRankUp && rankUp()}
             >
                 <div className="flex flex-col min-w-[100px]">
-                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] leading-none mb-1 ${canRankUp ? 'text-amber-400' : 'text-primary/70'}`}>
+                    <span className={`text-xs font-black uppercase tracking-[0.2em] leading-none mb-1.5 ${canRankUp ? 'text-amber-400' : 'text-primary/70'}`}>
                         {canRankUp ? 'Promotion Ready' : 'Scientist Rank'}
                     </span>
-                    <span className="text-base font-black leading-none text-foreground tracking-tighter">Level {experimentRank}</span>
+                    <span className="text-lg font-black leading-none text-foreground tracking-tighter">Level {experimentRank}</span>
                 </div>
 
                 <div className="flex-1 space-y-1.5">
-                    <div className="flex justify-between items-end text-[10px] font-mono font-bold tracking-tight">
-                        <span className={`uppercase opacity-50 tracking-widest ${canRankUp ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                    <div className="flex justify-between items-end text-xs font-mono font-bold tracking-tight">
+                        <span className={`uppercase opacity-70 tracking-widest ${canRankUp ? 'text-amber-400' : 'text-muted-foreground'}`}>
                             {canRankUp ? 'CLICK TO ADVANCE RANK' : 'Growth Progress'}
                         </span>
-                        <span className={`${canRankUp ? 'text-amber-400' : 'text-primary/90'}`}>{formatNumber(experimentXP)} / {formatNumber(xpReq)} XP</span>
+                        <span className={`${canRankUp ? 'text-amber-400' : 'text-foreground'}`}>{formatNumber(experimentXP)} / {formatNumber(xpReq)} XP</span>
                     </div>
                     <Progress
                         value={xpPercent}

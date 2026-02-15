@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { GameProvider, useGame } from './game/gameState';
 import { useGameLoop } from './hooks/useGameLoop';
 import Layout from './components/Layout';
-import ResourceDisplay from './components/ResourceDisplay';
 import GeneratorList from './components/GeneratorList';
 import ResearchList from './components/ResearchList';
 import GameNavigation from './components/GameNavigation';
@@ -16,6 +15,7 @@ import ChronosView from './components/ChronosView';
 import TalentsView from './components/TalentsView';
 import ExperimentsView from './components/ExperimentsView';
 import GlobalExperimentsList from './components/GlobalExperimentsList';
+import IntroView from './components/IntroView';
 
 import Decimal from 'break_eternity.js';
 import { RESEARCH_DATA } from './game/researchData';
@@ -93,7 +93,7 @@ const SettingsView = () => {
             </div>
 
             <div className="text-center text-xs text-muted-foreground mt-8">
-              Breaking Infinity v0.1.3-beta
+              Breaking Eternity v0.1.3-beta
             </div>
           </div>
         )}
@@ -120,57 +120,61 @@ function GameContent() {
   useGameLoop();
   const [view, setView] = useState('generators');
 
+  const { gameState } = useGame();
+
   return (
-    <Layout>
-      <div className="h-full w-full flex flex-col px-4 md:px-6 lg:px-8 pt-4 pb-0 space-y-4">
-        {/* Fixed Top Section: Resources + Experiments + Nav */}
-        <div className="flex-none space-y-4">
-          <ResourceDisplay />
-          <GlobalExperimentsList />
-          <GameNavigation activeView={view} setView={setView} />
+    <>
+      {!gameState.isIntroCompleted && <IntroView />}
+      <Layout>
+        <div className="h-full w-full flex flex-col px-4 md:px-6 lg:px-8 pt-4 pb-0 space-y-4">
+          {/* Fixed Top Section: Resources + Experiments + Nav */}
+          <div className="flex-none space-y-4">
+            <GlobalExperimentsList />
+            <GameNavigation activeView={view} setView={setView} />
+          </div>
+
+          {/* Scrollable Content Area */}
+          <div className="flex-1 min-h-0 pb-4">
+            {view === 'generators' && (
+              <div className="h-full fade-in-animation">
+                <GeneratorList />
+              </div>
+            )}
+
+            {view === 'settings' && (
+              <div className="h-full fade-in-animation">
+                <SettingsView />
+              </div>
+            )}
+
+            {view === 'research' && (
+              <div className="h-full fade-in-animation">
+                <ResearchList />
+              </div>
+            )}
+
+            {view === 'experiments' && (
+              <div className="h-full fade-in-animation">
+                <ExperimentsView />
+              </div>
+            )}
+
+            {view === 'talents' && (
+              <div className="h-full fade-in-animation">
+                <TalentsView />
+              </div>
+            )}
+
+            {view === 'chronos' && (
+              <div className="h-full fade-in-animation">
+                <ChronosView />
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 min-h-0 pb-4">
-          {view === 'generators' && (
-            <div className="h-full fade-in-animation">
-              <GeneratorList />
-            </div>
-          )}
-
-          {view === 'settings' && (
-            <div className="h-full fade-in-animation">
-              <SettingsView />
-            </div>
-          )}
-
-          {view === 'research' && (
-            <div className="h-full fade-in-animation">
-              <ResearchList />
-            </div>
-          )}
-
-          {view === 'experiments' && (
-            <div className="h-full fade-in-animation">
-              <ExperimentsView />
-            </div>
-          )}
-
-          {view === 'talents' && (
-            <div className="h-full fade-in-animation">
-              <TalentsView />
-            </div>
-          )}
-
-          {view === 'chronos' && (
-            <div className="h-full fade-in-animation">
-              <ChronosView />
-            </div>
-          )}
-        </div>
-      </div>
-      <OfflineDialog />
-    </Layout>
+        <OfflineDialog />
+      </Layout>
+    </>
   );
 }
 

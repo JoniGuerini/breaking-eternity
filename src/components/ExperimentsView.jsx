@@ -75,13 +75,13 @@ const ExperimentsView = () => {
                                     </h3>
                                     {mission.isCompleted && <CheckCircle2 size={13} className="text-emerald-500/50" />}
                                 </div>
-                                <p className={`text-xs leading-normal line-clamp-2 ${mission.isCompleted ? 'text-muted-foreground/50' : 'text-muted-foreground opacity-90'}`}>
+                                <p className={`text-sm leading-normal line-clamp-2 ${mission.isCompleted ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
                                     {mission.description}
                                 </p>
                             </div>
                             <Badge
                                 variant="outline"
-                                className={`text-[10px] font-bold tracking-wider px-2 h-5 shrink-0 ${mission.isCompleted
+                                className={`text-xs font-bold tracking-wider px-2 h-6 shrink-0 ${mission.isCompleted
                                     ? 'bg-muted/10 text-muted-foreground/40 border-border/50'
                                     : mission.canClaim
                                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
@@ -95,16 +95,16 @@ const ExperimentsView = () => {
                         <div className="mt-auto space-y-2">
                             {mission.isCompleted ? (
                                 <div className="flex items-center gap-2 py-1.5 px-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg">
-                                    <CheckCircle2 size={11} className="text-emerald-500/60" />
-                                    <span className="text-[10px] uppercase font-black text-emerald-500/60 tracking-[0.25em]">Record Documented</span>
+                                    <CheckCircle2 size={13} className="text-emerald-500/60" />
+                                    <span className="text-xs uppercase font-black text-emerald-500/60 tracking-[0.25em]">Record Documented</span>
                                 </div>
                             ) : (
                                 <div className="space-y-1.5">
-                                    <div className="flex justify-between items-end text-xs font-mono font-bold tracking-tight px-0.5">
-                                        <span className={`uppercase opacity-50 ${mission.canClaim ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                                    <div className="flex justify-between items-end text-sm font-mono font-bold tracking-tight px-0.5">
+                                        <span className={`uppercase opacity-70 ${mission.canClaim ? 'text-emerald-400' : 'text-muted-foreground'}`}>
                                             {mission.canClaim ? 'Ready to Claim' : 'Syncing Data...'}
                                         </span>
-                                        <span className={mission.canClaim ? 'text-emerald-400' : 'text-foreground/90'}>
+                                        <span className={mission.canClaim ? 'text-emerald-400' : 'text-foreground'}>
                                             {formatNumber(mission.progress)} / {formatNumber(mission.target)}
                                         </span>
                                     </div>

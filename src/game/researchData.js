@@ -1,5 +1,6 @@
 import Decimal from 'break_eternity.js';
-import { formatTime } from '../utils/formatUtils';
+import { formatTime, formatNumber } from '../utils/formatUtils';
+import { GENERATOR_NAMES } from './generatorData';
 
 export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     const genIndex = i;
@@ -8,8 +9,8 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     // Logistics Research (Maintenance Buffer)
     const speedItem = {
         id: `gen${genNum}_speed`,
-        name: `Logistics Buffer ${genNum}`,
-        target: `Generator ${genNum}`,
+        name: `Logistics Buffer`,
+        target: GENERATOR_NAMES[genIndex],
         type: 'Logistics',
         maxLevel: 20,
         getCost: (level) => new Decimal(Math.pow(genNum, 2)).times(new Decimal(2).pow(level)),
@@ -36,12 +37,12 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     // Efficiency Research (Yield Optimization)
     const effItem = {
         id: `gen${genNum}_eff`,
-        name: `Fragment Refinement ${genNum}`,
-        target: `Generator ${genNum}`,
+        name: `Fragment Refinement`,
+        target: GENERATOR_NAMES[genIndex],
         type: 'Efficiency',
         maxLevel: 100, // Efficiency can be much higher
-        // Efficiency costs 5x more than Speed base
-        getCost: (level) => new Decimal(Math.pow(genNum, 2) * 5).times(new Decimal(2.5).pow(level)),
+        // Efficiency costs 2x base, 1.5x growth (was 5x, 2.5x)
+        getCost: (level) => new Decimal(Math.pow(genNum, 2) * 2).times(new Decimal(1.5).pow(level)),
         getValue: (level) => 1 + level,
         baseDescription: "Increases fragment yield by 100%",
         getEffectValues: (level) => {
@@ -60,21 +61,21 @@ export const RESEARCH_DATA = Array.from({ length: 50 }, (_, i) => {
     // Resonance Research (Insight Multiplier)
     const resonanceItem = {
         id: `gen${genNum}_resonance`,
-        name: `Eternity Resonance ${genNum}`,
-        target: `Generator ${genNum}`,
+        name: `Eternity Resonance`,
+        target: GENERATOR_NAMES[genIndex],
         type: 'Resonance',
-        maxLevel: 10, // Multiplier caps at x1024 (2^10)
-        // High cost multiplier (4x base, 3x growth)
-        getCost: (level) => new Decimal(Math.pow(genNum, 2) * 20).times(new Decimal(3.5).pow(level)),
-        getValue: (level) => Math.pow(2, level),
+        maxLevel: 100, // Expanded from 10 to 100
+        // Lower cost multiplier (10x base, 2x growth)
+        getCost: (level) => new Decimal(Math.pow(genNum, 2) * 10).times(new Decimal(2.0).pow(level)),
+        getValue: (level) => Decimal.pow(2, level),
         baseDescription: "Doubles Insight results from milestones",
         getEffectValues: (level) => {
             return {
-                current: `x${Math.pow(2, level)}`,
-                next: `x${Math.pow(2, level + 1)}`
+                current: `x${formatNumber(Decimal.pow(2, level))}`,
+                next: `x${formatNumber(Decimal.pow(2, level + 1))}`
             };
         },
-        getEffectDisplay: (level) => `x${Math.pow(2, level)}`,
+        getEffectDisplay: (level) => `x${formatNumber(Decimal.pow(2, level))}`,
         condition: (gameState) => {
             const gen = gameState.generators[genIndex];
             return gen && gen.amount.gt(0);

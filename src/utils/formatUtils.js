@@ -17,7 +17,7 @@ export const formatNumber = (val, options = { precision: 0, growthRate: null }) 
         return decimal.toNumber().toLocaleString(locale, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        });
+        }).replace(',00', '');
     }
 
     // Rule 2: 1.000 <= x < 1.000.000 (0 decimals)
@@ -54,7 +54,7 @@ export const formatNumber = (val, options = { precision: 0, growthRate: null }) 
     return mantissa.toNumber().toLocaleString(locale, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }) + ' ' + suffix;
+    }).replace(',00', '') + ' ' + suffix;
 };
 
 export const formatTime = (seconds) => {

@@ -1,5 +1,6 @@
 import Decimal from 'break_eternity.js';
 import { formatNumber } from '../utils/formatUtils';
+import { GENERATOR_NAMES } from './generatorData';
 
 export const MISSION_TYPES = {
     COLLECT_FRAGMENTS: 'collect_fragments',
@@ -65,7 +66,7 @@ const generateMissions = () => {
                 mission.genId = genId;
                 mission.name = `Unit Deployment ${rank}.${i}`;
                 mission.target = amount;
-                mission.description = `Own ${formatNumber(amount)} Units of Generator ${genId + 1}.`;
+                mission.description = `Own ${formatNumber(amount)} of ${GENERATOR_NAMES[genId]}.`;
             } else {
                 mission.type = MISSION_TYPES.BUY_RESEARCH;
                 const researchLevels = Math.floor(rank * 1.2 + i * 0.8) + 1;
@@ -81,14 +82,14 @@ const generateMissions = () => {
                     mission.type = MISSION_TYPES.OWN_GENERATOR;
                     mission.genId = 0;
                     mission.target = new Decimal(10);
-                    mission.description = "Own 10 Units of Generator 1.";
+                    mission.description = `Own 10 of ${GENERATOR_NAMES[0]}.`;
                     mission.reward = { type: 'insight', amount: new Decimal(5), label: `${formatNumber(5)} Insights` };
                 } else if (i === 1) {
                     mission.name = "Expansion Protocol";
                     mission.type = MISSION_TYPES.OWN_GENERATOR;
                     mission.genId = 1;
                     mission.target = new Decimal(1);
-                    mission.description = "Unlock and own 1 Unit of Generator 2.";
+                    mission.description = `Unlock and own 1 of ${GENERATOR_NAMES[1]}.`;
                     mission.reward = { type: 'insight', amount: new Decimal(10), label: `${formatNumber(10)} Insights` };
                 } else if (i === 2) {
                     mission.name = "Energy Storage";

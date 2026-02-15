@@ -34,7 +34,8 @@ const INITIAL_STATE = {
         totalDeposited: new Decimal(0)
     },
     experimentRank: 1,
-    experimentXP: 0
+    experimentXP: 0,
+    isIntroCompleted: false
 };
 
 export const GameProvider = ({ children }) => {
@@ -67,6 +68,7 @@ export const GameProvider = ({ children }) => {
         parsed.completedMissions = parsed.completedMissions || [];
         parsed.missionStats = parsed.missionStats || { totalMilestones: 0, totalDeposited: new Decimal(0) };
         parsed.missionStats.totalDeposited = new Decimal(parsed.missionStats.totalDeposited || 0);
+        parsed.isIntroCompleted = parsed.isIntroCompleted || false;
 
         return parsed;
     };
@@ -305,7 +307,7 @@ export const GameProvider = ({ children }) => {
         if (!saved) {
             saved = localStorage.getItem('chronos-iteratio-save');
             if (saved) {
-                console.log("Migrating legacy save to Breaking Infinity...");
+                console.log("Migrating legacy save to Breaking Eternity...");
                 // Note: deserializeState handles the internal property renaming
             }
         }
@@ -466,6 +468,19 @@ export const GameProvider = ({ children }) => {
     const dismissTimeShift = useCallback(() => setGameState(prev => ({ ...prev, isTimeShiftDismissed: true })), []);
     const restoreTimeShift = useCallback(() => setGameState(prev => ({ ...prev, isTimeShiftDismissed: false })), []);
 
+    const completeIntro = useCallback(() => {
+        setGameState(prev => {
+            const next = {
+                ...prev,
+                isIntroCompleted: true,
+                eternityFragments: new Decimal(1)
+            };
+            return next;
+        });
+        // Force save immediately after intro to prevent loss
+        setTimeout(() => saveGame(), 100);
+    }, [saveGame]);
+
     // --- EFFECTS ---
     useEffect(() => { loadGame(); }, [loadGame]);
     useEffect(() => {
@@ -482,7 +497,7 @@ export const GameProvider = ({ children }) => {
             getMaintenanceRate, getGeneratorMaintenance, dismissTimeShift,
             restoreTimeShift, toggleOverclock: activateOverclock,
             activateOverclock, deactivateOverclock, claimMissionReward,
-            getXPRequired, rankUp
+            getXPRequired, rankUp, completeIntro
         }}>
             {children}
         </GameContext.Provider>

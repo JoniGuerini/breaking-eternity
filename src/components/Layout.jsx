@@ -113,7 +113,7 @@ const Layout = ({ children }) => {
             <header className="flex-none w-full px-4 md:px-8 py-2 md:py-3 flex justify-between items-center z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
                 <div className="shrink-0">
                     <h1 className="text-base md:text-xl font-black tracking-tighter text-primary select-none hidden sm:block">
-                        Breaking Infinity
+                        Breaking Eternity
                     </h1>
                     <h1 className="text-lg font-black tracking-tighter text-primary select-none block sm:hidden">
                         BI

@@ -54,14 +54,14 @@ const GameNavigation = ({ activeView, setView }) => {
                                     ? 'bg-primary/10 text-primary shadow-inner border border-primary/20 hover:bg-primary/15'
                                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground opacity-70 hover:opacity-100'}
                                 ${tab.disabled ? 'opacity-30 cursor-not-allowed' : ''}
-                                font-bold uppercase tracking-[0.1em] text-[10px]
+                                font-bold uppercase tracking-[0.1em] text-xs
                             `}
                         >
                             <div className="flex items-center justify-center gap-3">
                                 <Icon size={14} className={`${isActive ? 'opacity-100 animate-pulse' : 'opacity-60'}`} />
                                 <span className="hidden md:inline">{tab.label}</span>
                                 {tab.badge > 0 && (
-                                    <span className="flex h-4 min-w-[1rem] px-1.5 items-center justify-center bg-purple-600 text-[9px] font-black text-white rounded-sm">
+                                    <span className="flex h-4 min-w-[1rem] px-1.5 items-center justify-center bg-purple-600 text-[10px] font-black text-white rounded-sm">
                                         {tab.badge}
                                     </span>
                                 )}
