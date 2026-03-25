@@ -135,6 +135,18 @@ const getLetterSuffix = (index: number): string => {
   return ` ${result}` // Add space before suffix
 }
 
+/** Produção aplicada a níveis de gerador: inteiro estável (evita float e overflow silencioso em toNumber). */
+export const productionToIntegerLevels = (d: Decimal): number => {
+  try {
+    if (!d.isFinite() || d.lte(0)) return 0
+    const n = d.floor().toNumber()
+    if (!Number.isFinite(n) || n <= 0) return 0
+    return Math.min(n, Number.MAX_SAFE_INTEGER)
+  } catch {
+    return 0
+  }
+}
+
 export const formatNumber = (num: Decimal): string => {
   if (num.lt(1000)) return num.floor().toString()
   
@@ -144,7 +156,10 @@ export const formatNumber = (num: Decimal): string => {
   }
 
   const standardSuffixes = ["", " M", " B", " T", " Qa", " Qi", " Sx", " Sp", " Oc", " No"]
-  const exp = Math.floor(num.log10() as unknown as number)
+  // log10() devolve Decimal; Math.floor(Decimal) era coerção frágil (valueOf → string).
+  const logN = num.log10().toNumber()
+  if (!Number.isFinite(logN)) return num.toString()
+  const exp = Math.floor(logN)
   const suffixIdx = Math.floor(exp / 3) - 1
   
   if (suffixIdx < 0) return Math.floor(num.toNumber()).toLocaleString('pt-BR')

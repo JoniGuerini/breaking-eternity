@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react"
-import { type GameState, INITIAL_STATE, getGeneratorCost } from "@/lib/game-logic"
+import {
+  type GameState,
+  INITIAL_STATE,
+  getGeneratorCost,
+  productionToIntegerLevels,
+} from "@/lib/game-logic"
 import Decimal from "break_eternity.js"
 
 interface GameContextType {
@@ -72,7 +77,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
             } else {
               const targetId = `generator${genNum - 1}`
               if (mergedGenerators[targetId]) {
-                mergedGenerators[targetId].level += production.toNumber()
+                mergedGenerators[targetId].level += productionToIntegerLevels(production)
               }
             }
             gen.progress = newProgress
@@ -105,15 +110,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       let resourcesGained = new Decimal(0)
       const initialLevels: Record<string, number> = {}
       const tempGenerators = { ...INITIAL_STATE.generators }
-      
+
       if (parsed.generators) {
         Object.entries(parsed.generators).forEach(([id, gen]: [string, any]) => {
           if (tempGenerators[id]) {
-            tempGenerators[id] = { ...tempGenerators[id], level: gen.level || 0, progress: gen.progress || 0 }
-            initialLevels[id] = gen.level || 0
+            tempGenerators[id] = {
+              ...tempGenerators[id],
+              level: gen.level || 0,
+              progress: gen.progress || 0,
+            }
           }
         })
       }
+
+      Object.keys(tempGenerators).forEach((id) => {
+        initialLevels[id] = tempGenerators[id].level
+      })
 
       const genIds = Object.keys(tempGenerators).sort((a, b) => {
         const numA = parseInt(a.replace("generator", ""), 10) || 0
@@ -135,7 +147,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
           } else {
             const targetId = `generator${genNum - 1}`
             if (tempGenerators[targetId]) {
-              tempGenerators[targetId].level += production.toNumber()
+              tempGenerators[targetId].level += productionToIntegerLevels(production)
             }
           }
         }
@@ -211,22 +223,45 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
+  // Com aba visível: requestAnimationFrame (~60fps) como antes.
+  // Com aba em segundo plano: rAF pausa → setInterval aplica delta por tempo real.
   useEffect(() => {
-    let animationFrameId: number
+    let rafId: number | null = null
+    let intervalId: number | null = null
     let lastTime = performance.now()
+    lastFpsUpdateRef.current = lastTime
 
-    const gameLoop = (currentTime: number) => {
-      const delta = currentTime - lastTime
-      lastTime = currentTime
-      const safeDelta = Math.min(delta, 100)
+    const MAX_DELTA_MS = 1000 * 60 * 60 * 24 * 7
 
-      frameCountRef.current++
-      if (currentTime - lastFpsUpdateRef.current >= 1000) {
-        setFps(frameCountRef.current)
-        frameCountRef.current = 0
-        lastFpsUpdateRef.current = currentTime
-      }
+    const commitProduction = (
+      cycleCompleted: boolean,
+      resourcesAdded: Decimal,
+      levelsAdded: Record<string, number>
+    ) => {
+      if (!cycleCompleted) return
+      setState((prev) => {
+        const nextGenerators = { ...prev.generators }
+        Object.entries(levelsAdded).forEach(([targetId, amount]) => {
+          if (nextGenerators[targetId]) {
+            nextGenerators[targetId] = {
+              ...nextGenerators[targetId],
+              level: nextGenerators[targetId].level + amount,
+            }
+          }
+        })
+        return {
+          ...prev,
+          resources: prev.resources.plus(resourcesAdded),
+          generators: nextGenerators,
+        }
+      })
+    }
 
+    /** Avanço exato para qualquer Δt (fundo / hitch / volta à aba). */
+    const applyTickDelta = (deltaMs: number) => {
+      if (deltaMs <= 0) return
+
+      const dt = Math.min(deltaMs, MAX_DELTA_MS)
       let cycleCompleted = false
       let resourcesAdded = new Decimal(0)
       const levelsAdded: Record<string, number> = {}
@@ -235,24 +270,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       for (const id in generators) {
         const gen = generators[id]
         if (gen.level > 0) {
-          progressRef.current[id] = (progressRef.current[id] || 0) + (safeDelta / gen.duration)
-          
-          if (progressRef.current[id] >= 1) {
+          const duration = gen.duration
+          const prev = progressRef.current[id] || 0
+          const totalMs = prev * duration + dt
+          const cycles = Math.floor(totalMs / duration)
+          progressRef.current[id] = (totalMs % duration) / duration
+
+          if (cycles > 0) {
             cycleCompleted = true
-            const cycles = Math.floor(progressRef.current[id])
             const totalProd = gen.baseProduction.times(gen.level).times(cycles)
-            
-            const genNum = parseInt(id.replace("generator", ""))
+            const genNum = parseInt(id.replace("generator", ""), 10) || 0
             if (genNum === 1) {
               resourcesAdded = resourcesAdded.plus(totalProd)
             } else {
               const targetId = `generator${genNum - 1}`
-              levelsAdded[targetId] = (levelsAdded[targetId] || 0) + totalProd.toNumber()
+              levelsAdded[targetId] =
+                (levelsAdded[targetId] || 0) + productionToIntegerLevels(totalProd)
             }
-            
-            progressRef.current[id] %= 1
           }
-          
+
           const bar = barRefs.current[id]
           if (bar) {
             bar.style.transform = `scaleX(${progressRef.current[id]})`
@@ -260,31 +296,117 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      if (cycleCompleted) {
-        setState(prev => {
-          const nextGenerators = { ...prev.generators }
-          Object.entries(levelsAdded).forEach(([targetId, amount]) => {
-            if (nextGenerators[targetId]) {
-              nextGenerators[targetId] = {
-                ...nextGenerators[targetId],
-                level: nextGenerators[targetId].level + amount
-              }
-            }
-          })
-
-          return {
-            ...prev,
-            resources: prev.resources.plus(resourcesAdded),
-            generators: nextGenerators
-          }
-        })
-      }
-
-      animationFrameId = requestAnimationFrame(gameLoop)
+      commitProduction(cycleCompleted, resourcesAdded, levelsAdded)
     }
 
-    animationFrameId = requestAnimationFrame(gameLoop)
-    return () => cancelAnimationFrame(animationFrameId)
+    /** Passo pequeno por frame (comportamento original, barras suaves). */
+    const applyFrameStep = (safeDelta: number) => {
+      let cycleCompleted = false
+      let resourcesAdded = new Decimal(0)
+      const levelsAdded: Record<string, number> = {}
+
+      const generators = stateRef.current.generators
+      for (const id in generators) {
+        const gen = generators[id]
+        if (gen.level > 0) {
+          progressRef.current[id] =
+            (progressRef.current[id] || 0) + safeDelta / gen.duration
+
+          if (progressRef.current[id] >= 1) {
+            cycleCompleted = true
+            const cycles = Math.floor(progressRef.current[id])
+            const totalProd = gen.baseProduction.times(gen.level).times(cycles)
+            const genNum = parseInt(id.replace("generator", ""), 10) || 0
+            if (genNum === 1) {
+              resourcesAdded = resourcesAdded.plus(totalProd)
+            } else {
+              const targetId = `generator${genNum - 1}`
+              levelsAdded[targetId] =
+                (levelsAdded[targetId] || 0) + productionToIntegerLevels(totalProd)
+            }
+            progressRef.current[id] %= 1
+          }
+
+          const bar = barRefs.current[id]
+          if (bar) {
+            bar.style.transform = `scaleX(${progressRef.current[id]})`
+          }
+        }
+      }
+
+      commitProduction(cycleCompleted, resourcesAdded, levelsAdded)
+    }
+
+    const gameLoop = (currentTime: number) => {
+      const delta = currentTime - lastTime
+      lastTime = currentTime
+
+      if (delta > 200) {
+        applyTickDelta(Math.min(delta, MAX_DELTA_MS))
+      } else {
+        applyFrameStep(Math.min(delta, 100))
+      }
+
+      frameCountRef.current += 1
+      if (currentTime - lastFpsUpdateRef.current >= 1000) {
+        setFps(frameCountRef.current)
+        frameCountRef.current = 0
+        lastFpsUpdateRef.current = currentTime
+      }
+
+      rafId = requestAnimationFrame(gameLoop)
+    }
+
+    const backgroundTick = () => {
+      const now = performance.now()
+      const dt = now - lastTime
+      lastTime = now
+      applyTickDelta(Math.min(dt, MAX_DELTA_MS))
+    }
+
+    const startVisibleLoop = () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId)
+        intervalId = null
+      }
+      lastTime = performance.now()
+      rafId = requestAnimationFrame(gameLoop)
+    }
+
+    const startBackgroundLoop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      lastTime = performance.now()
+      intervalId = window.setInterval(backgroundTick, 250)
+    }
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        startBackgroundLoop()
+      } else {
+        const now = performance.now()
+        const dt = now - lastTime
+        lastTime = now
+        applyTickDelta(Math.min(dt, MAX_DELTA_MS))
+        startVisibleLoop()
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisibility)
+
+    if (document.hidden) {
+      startBackgroundLoop()
+    } else {
+      rafId = requestAnimationFrame(gameLoop)
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      if (intervalId !== null) window.clearInterval(intervalId)
+    }
   }, [])
 
   const toggleFps = () => {
@@ -301,21 +423,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const buyGenerator = (id: string) => {
-    setState(prev => {
+    setState((prev) => {
       const gen = prev.generators[id]
       if (!gen) return prev
       const cost = getGeneratorCost(gen)
-      if (prev.resources.gte(cost)) {
-        return {
-          ...prev,
-          resources: prev.resources.minus(cost),
-          generators: {
-            ...prev.generators,
-            [id]: { ...gen, level: gen.level + 1 },
-          },
-        }
+      if (prev.resources.cmp(cost) < 0) return prev
+      return {
+        ...prev,
+        resources: prev.resources.minus(cost),
+        generators: {
+          ...prev.generators,
+          [id]: { ...gen, level: gen.level + 1 },
+        },
       }
-      return prev
     })
   }
 

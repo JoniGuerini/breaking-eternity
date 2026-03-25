@@ -23,7 +23,7 @@ export const Header: React.FC = () => {
         <span className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold">
           Recurso Base
         </span>
-        <span className="text-xl font-mono font-black text-primary leading-tight">
+        <span className="text-xl font-sans font-black text-primary leading-tight tabular-nums">
           {formatNumber(state.resources)}
         </span>
       </div>
@@ -31,7 +31,7 @@ export const Header: React.FC = () => {
       {/* Right side: FPS Counter */}
       <div className="w-1/3 flex justify-end items-center">
         {state.showFps && (
-          <span className={`font-mono text-[14px] font-bold ${getFpsColor()}`}>
+          <span className={`font-sans tabular-nums text-[14px] font-bold ${getFpsColor()}`}>
             {fps} FPS
           </span>
         )}

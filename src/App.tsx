@@ -1,8 +1,10 @@
 import { useState } from "react"
 import { GameProvider } from "@/components/game-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { Header } from "@/components/layout/Header"
 import { Footer } from "@/components/layout/Footer"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { GeneratorsPage } from "@/pages/GeneratorsPage"
 import { OptionsPage } from "@/pages/OptionsPage"
 
@@ -11,15 +13,32 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="breaking-eternity-theme">
-      <GameProvider>
-        <div className="flex flex-col min-h-screen bg-background text-foreground">
-          <Header />
-          <main className="flex-1 flex flex-col transition-all overflow-hidden">
-            {activeTab === "generators" ? <GeneratorsPage /> : <OptionsPage />}
-          </main>
-          <Footer activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-      </GameProvider>
+      <TooltipProvider delayDuration={300}>
+        <GameProvider>
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex min-h-screen flex-col gap-0 bg-background text-foreground"
+          >
+            <Header />
+            <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <TabsContent
+                value="generators"
+                className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
+              >
+                <GeneratorsPage />
+              </TabsContent>
+              <TabsContent
+                value="options"
+                className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
+              >
+                <OptionsPage />
+              </TabsContent>
+            </main>
+            <Footer />
+          </Tabs>
+        </GameProvider>
+      </TooltipProvider>
     </ThemeProvider>
   )
 }

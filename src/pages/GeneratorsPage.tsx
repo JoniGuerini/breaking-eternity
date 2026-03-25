@@ -3,6 +3,11 @@ import { useGame } from "@/components/game-provider"
 import { formatNumber, getGeneratorCost, formatTime } from "@/lib/game-logic"
 import { Button } from "@/components/ui/button"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogContent,
@@ -47,6 +52,25 @@ const GeneratorRow: React.FC<{
     return () => stopBuying()
   }, [stopBuying])
 
+  // Segurar "Comprar" dispara compras a cada 100ms; sem isto o intervalo pode continuar
+  // ao mudar de janela/aba (mouseleave/mouseup não disparam) e drenar recursos "sozinho".
+  useEffect(() => {
+    const stop = () => stopBuying()
+    const onVis = () => {
+      if (document.hidden) stop()
+    }
+    window.addEventListener("blur", stop)
+    window.addEventListener("pointerup", stop)
+    window.addEventListener("pointercancel", stop)
+    document.addEventListener("visibilitychange", onVis)
+    return () => {
+      window.removeEventListener("blur", stop)
+      window.removeEventListener("pointerup", stop)
+      window.removeEventListener("pointercancel", stop)
+      document.removeEventListener("visibilitychange", onVis)
+    }
+  }, [stopBuying])
+
   return (
     <div className="flex items-center gap-2 w-full">
       {/* 1. Name Card (Simplified Index) */}
@@ -58,7 +82,7 @@ const GeneratorRow: React.FC<{
 
       {/* 2. Quantity Card (Fixed Width for Stability) */}
       <div className="h-10 w-24 bg-[hsl(var(--progress-bg))] border border-muted-foreground/15 rounded-lg flex items-center justify-center shrink-0">
-        <span className="text-[14px] font-medium font-mono">
+        <span className="text-[14px] font-medium font-sans tabular-nums">
           {formatNumber(new Decimal(gen.level))}
         </span>
       </div>
@@ -73,7 +97,7 @@ const GeneratorRow: React.FC<{
         />
         
         {/* Labels inside the bar (Refined 14px Medium) */}
-        <div className="absolute inset-0 flex items-center justify-between px-5 font-mono font-medium text-[14px] pointer-events-none tracking-normal mix-blend-difference text-white">
+        <div className="absolute inset-0 flex items-center justify-between px-5 font-sans tabular-nums font-medium text-[14px] pointer-events-none tracking-normal mix-blend-difference text-white">
           <span className="drop-shadow-sm">
             {formatTime(gen.duration)}
           </span>
@@ -84,15 +108,34 @@ const GeneratorRow: React.FC<{
       </div>
 
       {/* 4. Buy Button Card (With Hold-to-Buy) */}
-      <Button 
-        onMouseDown={startBuying}
-        onMouseUp={stopBuying}
-        onMouseLeave={stopBuying}
-        disabled={!canAfford}
-        className={`h-10 px-6 border border-muted-foreground/15 text-[14px] font-medium tracking-wide min-w-[160px] rounded-lg shadow-none active:scale-[0.98] transition-transform ${canAfford ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-secondary/50 text-muted-foreground'}`}
-      >
-        Comprar
-      </Button>
+      {canAfford ? (
+        <Button
+          onMouseDown={startBuying}
+          onMouseUp={stopBuying}
+          onMouseLeave={stopBuying}
+          className="h-10 min-w-[160px] rounded-lg border border-muted-foreground/15 px-6 text-[14px] font-medium tracking-wide shadow-none transition-transform active:scale-[0.98] bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          Comprar
+        </Button>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-default">
+              <Button
+                disabled
+                className="h-10 min-w-[160px] rounded-lg border border-muted-foreground/15 px-6 text-[14px] font-medium tracking-wide shadow-none bg-secondary/50 text-muted-foreground"
+              >
+                Comprar
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <span className="text-sm font-semibold tabular-nums text-destructive">
+              {formatNumber(cost)}
+            </span>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -107,57 +150,117 @@ export const GeneratorsPage: React.FC = () => {
     <div className="flex-1 p-6 space-y-4 overflow-y-auto w-full font-sans relative">
       {/* Welcome Back Dialog */}
       <AlertDialog open={!!offlineProgress} onOpenChange={(open) => !open && clearOfflineProgress()}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold">Bem-vindo de volta!</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-muted-foreground">
-              Sua produção continuou enquanto você estava fora por {offlineProgress && formatTime(offlineProgress.timeOffline)}.
+        <AlertDialogContent className="flex max-h-[min(92vh,44rem)] max-w-lg flex-col gap-4 overflow-hidden">
+          <AlertDialogHeader className="shrink-0 space-y-3 text-left">
+            <AlertDialogTitle>Bem-vindo de volta!</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <p>
+                Sua produção continuou enquanto você estava fora por{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {offlineProgress ? formatTime(offlineProgress.timeOffline) : "—"}
+                </span>
+                .
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-none">
-            {/* Resources Gained */}
-            <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border/50">
-              <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Recurso Base</span>
-              <span className="text-lg font-mono font-bold text-primary">
-                +{offlineProgress && formatNumber(offlineProgress.resourcesGained)} Sx
-              </span>
-            </div>
-
-            {/* Generator Gains */}
-            {offlineProgress && (
-              <div className="space-y-3">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] px-1 blur-[0.2px]">Produção Offline</span>
-                <div className="grid gap-2">
-                  {Object.keys(offlineProgress.initialLevels)
-                    .sort((a, b) => parseInt(a.replace("generator", ""), 10) - parseInt(b.replace("generator", ""), 10))
-                    .map((id) => {
-                      const initial = offlineProgress.initialLevels[id]
-                      const final = offlineProgress.finalLevels[id]
-                      const gained = final - initial
-                      
-                      // Only show if it has a level or gained something
-                      if (initial === 0 && gained === 0) return null
-
-                      return (
-                        <div key={id} className="flex items-center justify-between p-3 bg-card border border-border/40 rounded-md shadow-sm">
-                          <span className="text-sm font-bold text-zinc-300">Gerador {id.replace("generator", "")}</span>
-                          <div className="flex items-center gap-2 font-mono text-sm leading-none">
-                            <span className="text-zinc-500">{formatNumber(new Decimal(initial))}</span>
-                            <span className="text-zinc-600">→</span>
-                            <span className="text-primary font-bold">{formatNumber(new Decimal(final))}</span>
-                            <span className="text-green-500 font-bold ml-1">(+{formatNumber(new Decimal(gained))})</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
+          {offlineProgress && (
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-muted/30 scrollbar-none">
+              <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Recurso base
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-foreground">
+                  +{formatNumber(offlineProgress.resourcesGained)}
+                </span>
               </div>
-            )}
-          </div>
 
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={clearOfflineProgress} className="w-full sm:w-auto h-11 font-bold">
+              <div className="overflow-x-auto px-2 pb-2 pt-2 sm:px-3">
+                <table className="w-full min-w-[320px] border-collapse text-sm">
+                  <caption className="sr-only">
+                    Produção offline por gerador
+                  </caption>
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th
+                        scope="col"
+                        className="px-2 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:px-3"
+                      >
+                        Gerador
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-2 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:px-3"
+                      >
+                        Antes
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-2 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:px-3"
+                      >
+                        Atual
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-2 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground sm:px-3"
+                      >
+                        Gerado offline
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(offlineProgress.finalLevels)
+                      .sort(
+                        (a, b) =>
+                          parseInt(a.replace("generator", ""), 10) -
+                          parseInt(b.replace("generator", ""), 10)
+                      )
+                      .map((id) => {
+                        const initial = offlineProgress.initialLevels[id] ?? 0
+                        const final = offlineProgress.finalLevels[id] ?? 0
+                        const gained = final - initial
+
+                        return (
+                          <tr
+                            key={id}
+                            className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/40"
+                          >
+                            <th
+                              scope="row"
+                              className="whitespace-nowrap px-2 py-2.5 text-left font-medium text-foreground sm:px-3"
+                            >
+                              Gerador {id.replace("generator", "")}
+                            </th>
+                            <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground sm:px-3">
+                              {formatNumber(new Decimal(initial))}
+                            </td>
+                            <td className="px-2 py-2.5 text-right tabular-nums font-medium text-foreground sm:px-3">
+                              {formatNumber(new Decimal(final))}
+                            </td>
+                            <td
+                              className={`px-2 py-2.5 text-right tabular-nums font-medium sm:px-3 ${
+                                gained === 0
+                                  ? "text-muted-foreground"
+                                  : "text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            >
+                              {gained >= 0 ? "+" : ""}
+                              {formatNumber(new Decimal(gained))}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter className="shrink-0">
+            <AlertDialogAction
+              onClick={clearOfflineProgress}
+              className="w-full sm:w-auto"
+            >
               Continuar Produzindo
             </AlertDialogAction>
           </AlertDialogFooter>
