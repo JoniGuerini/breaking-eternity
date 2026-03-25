@@ -4,6 +4,7 @@ import {
   INITIAL_STATE,
   getGeneratorCost,
   productionToIntegerLevels,
+  claimEligibleMilestones,
 } from "@/lib/game-logic"
 import Decimal from "break_eternity.js"
 
@@ -13,6 +14,7 @@ interface GameContextType {
   toggleFps: () => void
   resetGame: () => void
   buyGenerator: (id: string) => void
+  claimGeneratorMilestones: (id: string) => void
   registerBar: (id: string, el: HTMLDivElement | null) => void
   offlineProgress: OfflineProgress | null
   clearOfflineProgress: () => void
@@ -46,6 +48,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
               ...mergedGenerators[id],
               level: gen.level || 0,
               progress: gen.progress || 0,
+              claimedMilestoneExponents: Array.isArray(gen.claimedMilestoneExponents)
+                ? gen.claimedMilestoneExponents
+                : [],
             }
           }
         })
@@ -89,6 +94,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         ...INITIAL_STATE,
         ...parsed,
         resources,
+        milestoneCurrency:
+          typeof parsed.milestoneCurrency === "number" && Number.isFinite(parsed.milestoneCurrency)
+            ? Math.max(0, Math.floor(parsed.milestoneCurrency))
+            : 0,
         generators: mergedGenerators,
         lastSaveTime: Date.now(),
       }
@@ -118,6 +127,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
               ...tempGenerators[id],
               level: gen.level || 0,
               progress: gen.progress || 0,
+              claimedMilestoneExponents: Array.isArray(gen.claimedMilestoneExponents)
+                ? gen.claimedMilestoneExponents
+                : [],
             }
           }
         })
@@ -433,7 +445,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         resources: prev.resources.minus(cost),
         generators: {
           ...prev.generators,
-          [id]: { ...gen, level: gen.level + 1 },
+          [id]: {
+            ...gen,
+            level: gen.level + 1,
+            claimedMilestoneExponents: gen.claimedMilestoneExponents ?? [],
+          },
+        },
+      }
+    })
+  }
+
+  const claimGeneratorMilestones = (id: string) => {
+    setState((prev) => {
+      const gen = prev.generators[id]
+      if (!gen) return prev
+      const claimed = gen.claimedMilestoneExponents ?? []
+      const { nextClaimed, coinsGained } = claimEligibleMilestones(gen.level, claimed)
+      if (coinsGained === 0) return prev
+      return {
+        ...prev,
+        milestoneCurrency: prev.milestoneCurrency + coinsGained,
+        generators: {
+          ...prev.generators,
+          [id]: { ...gen, claimedMilestoneExponents: nextClaimed },
         },
       }
     })
@@ -445,6 +479,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     toggleFps,
     resetGame,
     buyGenerator,
+    claimGeneratorMilestones,
     registerBar,
     offlineProgress,
     clearOfflineProgress: () => setOfflineProgress(null),

@@ -66,6 +66,8 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
+    /* Cor única (HSL shadcn): moedas no header, barra de marcos, badge. Ver utilitários abaixo. */
+    --milestone-currency: 221.2 83.2% 53.3%;
   }
 
   .dark {
@@ -90,6 +92,7 @@
     --ring: 0 0% 83.1%;
     --progress-fill: 0 0% 100%;
     --progress-bg: 0 0% 14.9%;
+    --milestone-currency: 221.2 83.2% 53.3%;
   }
 }
 
@@ -131,5 +134,19 @@ html, body, #root {
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Baseados em var(--milestone-currency) — sem cor inline nos componentes */
+  .text-milestone-currency {
+    color: hsl(var(--milestone-currency));
+  }
+  .bg-milestone-currency {
+    background-color: hsl(var(--milestone-currency));
+  }
+  .border-milestone-currency {
+    border-color: hsl(var(--milestone-currency) / 0.45);
+  }
+  .border-r-milestone-currency {
+    border-right-color: hsl(var(--milestone-currency) / 0.55);
   }
 }

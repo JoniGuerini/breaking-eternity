@@ -1,6 +1,13 @@
 import React, { useRef, useCallback, useEffect } from "react"
 import { useGame } from "@/components/game-provider"
-import { formatNumber, getGeneratorCost, formatTime } from "@/lib/game-logic"
+import {
+  formatNumber,
+  getGeneratorCost,
+  formatTime,
+  getMilestoneBarProgress,
+  getNextMilestoneGoalForBar,
+  countPendingMilestones,
+} from "@/lib/game-logic"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -18,15 +25,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import Decimal from "break_eternity.js"
 
-const GeneratorRow: React.FC<{ 
-  gen: any; 
-  resources: Decimal; 
-  buyGenerator: (id: string) => void;
-  registerBar: (id: string, el: HTMLDivElement | null) => void;
-}> = ({ gen, resources, buyGenerator, registerBar }) => {
+const GeneratorRow: React.FC<{
+  gen: any
+  resources: Decimal
+  buyGenerator: (id: string) => void
+  claimGeneratorMilestones: (id: string) => void
+  registerBar: (id: string, el: HTMLDivElement | null) => void
+}> = ({ gen, resources, buyGenerator, claimGeneratorMilestones, registerBar }) => {
   const cost = getGeneratorCost(gen)
   const canAfford = resources.gte(cost)
   const totalProduction = gen.baseProduction.times(gen.level)
+  const claimed = gen.claimedMilestoneExponents ?? []
+  const pendingMarcos = countPendingMilestones(gen.level, claimed)
+  const milestoneFill = getMilestoneBarProgress(gen.level, claimed)
+  const nextMarco = getNextMilestoneGoalForBar(gen.level, claimed)
   const timerRef = useRef<any>(null)
 
   const stopBuying = useCallback(() => {
@@ -80,12 +92,48 @@ const GeneratorRow: React.FC<{
         </h2>
       </div>
 
-      {/* 2. Quantity Card (Fixed Width for Stability) */}
-      <div className="h-10 w-24 bg-[hsl(var(--progress-bg))] border border-muted-foreground/15 rounded-lg flex items-center justify-center shrink-0">
-        <span className="text-[14px] font-medium font-sans tabular-nums">
-          {formatNumber(new Decimal(gen.level))}
-        </span>
-      </div>
+      {/* 2. Quantidade + barra de marco (clique resgata moedas pendentes) */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex shrink-0">
+            <button
+              type="button"
+              disabled={pendingMarcos === 0}
+              onClick={() => claimGeneratorMilestones(gen.id)}
+              className={`relative h-10 w-[5.75rem] shrink-0 overflow-visible rounded-lg border border-muted-foreground/15 bg-[hsl(var(--progress-bg))] text-center transition-[box-shadow,transform] active:scale-[0.98] ${
+                pendingMarcos > 0 ? "cursor-pointer" : "cursor-default"
+              }`}
+            >
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
+                <div
+                  className="absolute top-0 left-0 h-full w-full origin-left border-r border-r-milestone-currency bg-milestone-currency will-change-transform"
+                  style={{ transform: `scaleX(${milestoneFill})` }}
+                  aria-hidden
+                />
+                <div className="relative flex h-full items-center justify-center px-1.5">
+                  <span className="text-[13px] font-semibold font-sans tabular-nums leading-none tracking-normal text-neutral-950 dark:text-white dark:drop-shadow-[0_0_1px_rgba(0,0,0,0.55),0_1px_2px_rgba(0,0,0,0.35)]">
+                    {formatNumber(new Decimal(gen.level))}
+                  </span>
+                </div>
+              </div>
+              {pendingMarcos > 0 ? (
+                <span
+                  className="pointer-events-none absolute -right-1 -top-1 z-10 flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-md border border-milestone-currency bg-white px-1 text-[10px] font-bold tabular-nums leading-none text-milestone-currency shadow-md dark:bg-white"
+                  aria-hidden
+                >
+                  {pendingMarcos}
+                </span>
+              ) : null}
+            </button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs text-muted-foreground">Próximo marco</p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">
+            {formatNumber(new Decimal(nextMarco))}
+          </p>
+        </TooltipContent>
+      </Tooltip>
 
       {/* 3. Progress Bar Card */}
       <div className="flex-1 relative h-10 bg-[hsl(var(--progress-bg))] rounded-lg overflow-hidden border border-muted-foreground/15 shadow-inner group">
@@ -141,7 +189,14 @@ const GeneratorRow: React.FC<{
 }
 
 export const GeneratorsPage: React.FC = () => {
-  const { state, buyGenerator, registerBar, offlineProgress, clearOfflineProgress } = useGame()
+  const {
+    state,
+    buyGenerator,
+    claimGeneratorMilestones,
+    registerBar,
+    offlineProgress,
+    clearOfflineProgress,
+  } = useGame()
 
   // Dynamic rendering of all generators
   const generators = Object.values(state.generators)
@@ -268,11 +323,12 @@ export const GeneratorsPage: React.FC = () => {
       </AlertDialog>
 
       {generators.map((gen) => (
-        <GeneratorRow 
-          key={gen.id} 
-          gen={gen} 
-          resources={state.resources} 
-          buyGenerator={buyGenerator} 
+        <GeneratorRow
+          key={gen.id}
+          gen={gen}
+          resources={state.resources}
+          buyGenerator={buyGenerator}
+          claimGeneratorMilestones={claimGeneratorMilestones}
           registerBar={registerBar}
         />
       ))}
